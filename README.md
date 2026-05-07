@@ -16,7 +16,7 @@ Provides an admin dashboard to manage hiring decisions
 
 Enables communication with shortlisted candidates via email
 
-✨ Features
+✨ Features.
 👤 Candidate Side
 
 User authentication (Signup/Login)
