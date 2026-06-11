@@ -1,4 +1,4 @@
-🚀 AI Hiring System.
+🚀 AI Hiring System
 
 An intelligent recruitment platform that automates candidate screening using AI-powered resume analysis, ranking applicants based on job requirements and helping recruiters make faster, smarter hiring decisions.
 
