@@ -1,164 +1,207 @@
-# AI Hiring Intelligence System 🚀
+🚀 AI Hiring System
 
-An AI-powered hiring assistant that analyzes candidate resumes against job descriptions and calculates a compatibility score using Natural Language Processing (NLP).
+An intelligent recruitment platform that automates candidate screening using AI-powered resume analysis, ranking applicants based on job requirements and helping recruiters make faster, smarter hiring decisions.
 
-This system simulates how modern Applicant Tracking Systems (ATS) help recruiters quickly evaluate candidates by analyzing resumes, estimating experience, and ranking applicants based on relevance to a job description.
+📌 Overview.
 
----
+The AI Hiring System is a full-stack web application that:
 
-## 📌 Features
+Allows candidates to upload resumes
 
-* AI-powered resume and job description matching
-* TF-IDF based Natural Language Processing
-* Cosine Similarity scoring system
-* Automatic experience extraction from resumes
-* Candidate ranking system
-* Backend API built with FastAPI
-* Interactive frontend built with Streamlit
-* Database storage using SQLAlchemy
+Uses AI/NLP to evaluate and score applicants
 
----
+Ranks candidates based on relevance to job requirements
 
-## 🧠 How the AI Works.
+Provides an admin dashboard to manage hiring decisions
 
-The system uses **Natural Language Processing techniques** to compare resumes with job descriptions.
+Enables communication with shortlisted candidates via email
 
-1. Text preprocessing cleans the input data.
-2. TF-IDF converts text into numerical vectors.
-3. Cosine similarity measures how closely the resume matches the job description.
-4. Regex pattern matching extracts candidate experience.
-5. Results are stored in a database for recruiter review.
+✨ Features.
+👤 Candidate Side
 
----
+User authentication (Signup/Login)
 
-## 🏗 System Architecture
+Resume upload (PDF)
 
-Frontend (Streamlit UI)
-↓
-FastAPI Backend
-↓
-AI Engine (TF-IDF + Cosine Similarity)
-↓
-Database (SQLAlchemy)
+Automatic resume parsing
 
----
+AI-based scoring
 
-## 🛠 Technologies Used
+Personal dashboard to track submissions
+
+🛠️ Admin Side
+
+Secure admin login with OTP verification
+
+View top-ranked candidates
+
+Access detailed candidate insights
+
+Send emails to selected applicants
+
+Manage job postings
+
+🤖 AI Capabilities
+
+Resume skill extraction
+
+Keyword matching
+
+Experience evaluation
+
+Candidate ranking algorithm
+
+🧱 Tech Stack
+🔹 Frontend
+
+Streamlit (UI)
+
+HTML/CSS (custom styling)
+
+🔹 Backend
+
+FastAPI
 
 Python
-FastAPI
-Streamlit
-Scikit-learn
-SQLAlchemy
-Pydantic
-Regex
-Uvicorn
 
----
+🔹 Database
 
-## 📂 Project Structure
+SQL Server
 
-ai-hiring-system
+🔹 AI / NLP
 
-backend/
+Python NLP techniques (spaCy / custom parsing)
 
-* main.py
-* ai_engine.py
-* database.py
+Resume analysis logic
 
-frontend/
+🔹 Other Tools
 
-* streamlit_app.py
+Uvicorn (ASGI server)
 
-requirements.txt
-README.md
+Git & GitHub
 
----
-
-## ⚙️ Installation
-
-Clone the repository
-
-git clone https://github.com/Allankw-dev/ai-hiring-system.git
-
-Navigate into the project
-
+📂 Project Structure
+ai-hiring-system/
+│
+├── backend/
+│   ├── app/
+│   │   ├── models/
+│   │   ├── routers/
+│   │   ├── schemas/
+│   │   ├── services/
+│   │   └── core/
+│
+├── frontend/
+│   ├── pages/
+│   ├── api.py
+│   └── app.py
+│
+├── uploads/
+├── requirements.txt
+└── README.md
+⚙️ Installation & Setup
+1️⃣ Clone the Repository
+git clone https://github.com/your-username/ai-hiring-system.git
 cd ai-hiring-system
-
-Install dependencies
-
+2️⃣ Backend Setup
+cd backend
 pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8010
+3️⃣ Frontend Setup
+cd frontend
+streamlit run app.py
+🗄️ Database Configuration
 
----
+Update your .env file:
 
-## ▶️ Running the Backend
+SQL_SERVER=localhost\SQLEXPRESS
+SQL_DATABASE=AIHiringDB
+SQL_DRIVER=ODBC Driver 17 for SQL Server
 
-Start the FastAPI server
+SECRET_KEY=your_secret_key
 
-uvicorn backend.main:app --reload
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=587
+ADMIN_EMAIL=your_email@gmail.com
+ADMIN_EMAIL_PASSWORD=your_password
+🔐 Authentication Flow
 
-The API will run at
+Users sign up and log in normally
 
-http://127.0.0.1:8000
+Admin login requires:
 
----
+Email + Password
 
-## ▶️ Running the Frontend
+OTP verification (extra security layer)
 
-Start the Streamlit application
+📊 How It Works
 
-streamlit run frontend/streamlit_app.py
+Candidate uploads resume
 
----
+System extracts:
 
-## 📡 API Endpoints
+Skills
 
-GET /
+Experience
 
-Returns system status.
+Keywords
 
-POST /analyze
+AI compares resume with job requirements
 
-Analyzes a candidate resume against a job description.
+Generates a score
 
-GET /candidates
+Candidates are ranked automatically
 
-Returns stored candidates and their match scores.
+Admin reviews top candidates
 
----
+📧 Email Integration
 
-## 📊 Example Response
+Admin can send emails to selected candidates
 
-{
-"name": "John Doe",
-"match_score": 84.3,
-"experience": 3
-}
+Useful for:
 
----
+Interview invitations
 
-## 🚀 Future Improvements
+Shortlisting notifications
 
-* Skill extraction using NLP
-* Machine learning based candidate ranking
-* Resume PDF parsing
-* Job skill detection
-* Candidate dashboard
-* Docker deployment
+🧠 Future Improvements
 
----
+Advanced NLP models (BERT / LLM integration)
 
-## 📄 License
+Real-time interview scheduling
 
-This project is licensed under the MIT License.
+Dashboard analytics
 
----
+Multi-company support
 
-## 👨‍💻 Author
+Cloud deployment (AWS/Azure)
+
+🏆 Why This Project?
+
+Solves real-world hiring inefficiencies
+
+Demonstrates full-stack + AI skills
+
+Combines backend, frontend, and ML concepts
+
+Portfolio-ready project for software engineering roles
+
+👨‍💻 Author
 
 Allan Kamau
-GitHub: https://github.com/Allankw-dev
 
----
+💼 Software Engineer
 
-⭐ If you found this project useful, consider giving it a star.
+🤖 AI & ML Enthusiast
+
+🌐 Full Stack Developer
+
+⭐ Support
+
+If you like this project:
+
+⭐ Star the repo
+
+🍴 Fork it
+
+📢 Share it
