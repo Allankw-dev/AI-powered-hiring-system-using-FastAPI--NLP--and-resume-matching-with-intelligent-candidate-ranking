@@ -24,6 +24,10 @@ def render():
         email = st.text_input("Email")
         password = st.text_input("Password", type="password")
         confirm_password = st.text_input("Confirm Password", type="password")
+
+        # ✅ NEW FIELD
+        sex = st.selectbox("Sex", ["Male", "Female", "Other"])
+
         submitted = st.form_submit_button("Create Account")
 
     if submitted:
@@ -35,7 +39,8 @@ def render():
             st.error("Passwords do not match.")
             return
 
-        response = sign_up(full_name, email, password)
+        # ✅ PASS sex to API
+        response = sign_up(full_name, email, password, sex)
 
         if response.status_code in [200, 201]:
             st.success("Account created successfully. You can now log in.")

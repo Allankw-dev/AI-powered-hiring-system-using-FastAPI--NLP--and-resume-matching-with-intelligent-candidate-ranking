@@ -1,7 +1,6 @@
 import requests
 import streamlit as st
-
-API_BASE_URL = "http://127.0.0.1:8010"
+API_URL = st.secrets.get("API_URL", "http://localhost:8000")
 REQUEST_TIMEOUT = 10
 
 
@@ -25,13 +24,14 @@ def get_headers_without_content_type():
 # ------------------------------
 # AUTH ROUTES
 # ------------------------------
-def sign_up(full_name, email, password):
+def sign_up(full_name, email, password, sex):
     return requests.post(
         f"{API_BASE_URL}/auth/signup",
         json={
             "full_name": full_name,
             "email": email,
-            "password": password
+            "password": password,
+            "sex": sex
         },
         timeout=REQUEST_TIMEOUT
     )

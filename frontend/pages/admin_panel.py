@@ -179,6 +179,8 @@ def render():
 
         col1, col2 = st.columns(2)
 
+        
+
         with col1:
             st.write("**Applicant:**", selected.get("applicant_name", "N/A"))
             st.write("**Email:**", selected.get("applicant_email", "N/A"))
