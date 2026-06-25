@@ -103,6 +103,26 @@ def create_job(title, company, description, required_skills, min_experience):
         },
         timeout=REQUEST_TIMEOUT
     )
+def update_job(job_id, title, company, description, required_skills, min_experience):
+    return requests.put(
+        f"{API_BASE_URL}/jobs/{job_id}",
+        headers=get_headers(),
+        json={
+            "title": title,
+            "company": company,
+            "description": description,
+            "required_skills": required_skills,
+            "min_experience": min_experience
+        },
+        timeout=REQUEST_TIMEOUT
+    )
+
+def delete_job(job_id):
+    return requests.delete(
+        f"{API_BASE_URL}/jobs/{job_id}",
+        headers=get_headers(),
+        timeout=REQUEST_TIMEOUT
+    )
 
 
 # ------------------------------

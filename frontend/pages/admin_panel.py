@@ -5,7 +5,9 @@ from api import (
     reject_candidate,
     send_candidate_email,
     create_job,
-    list_jobs
+    list_jobs,
+    update_job,
+    delete_job
 )
 
 
@@ -21,19 +23,16 @@ def render():
         margin-bottom: 1rem;
         border: 1px solid rgba(255,255,255,0.08);
     }
-
     .page-title {
         color: white;
         font-size: 2.2rem;
         font-weight: 700;
         margin-bottom: 0.3rem;
     }
-
     .page-subtitle {
         color: #cbd5e1;
         margin-bottom: 1.2rem;
     }
-
     .info-box {
         background: rgba(37, 99, 235, 0.16);
         border: 1px solid rgba(96, 165, 250, 0.25);
@@ -42,7 +41,6 @@ def render():
         border-radius: 14px;
         margin-bottom: 1rem;
     }
-
     .job-card {
         background: rgba(255,255,255,0.05);
         border: 1px solid rgba(255,255,255,0.08);
@@ -92,7 +90,6 @@ def render():
                 max_value=50,
                 step=1
             )
-
             submitted = st.form_submit_button("Post Job")
 
         if submitted:
@@ -106,14 +103,8 @@ def render():
                     required_skills=required_skills,
                     min_experience=min_experience
                 )
-
                 if response.status_code in [200, 201]:
                     st.success("Job posted successfully.")
-                    try:
-                        job_data = response.json()
-                        st.write("Created Job ID:", job_data.get("id", "N/A"))
-                    except Exception:
-                        pass
                     st.rerun()
                 else:
                     try:
@@ -131,15 +122,48 @@ def render():
                 st.info("No jobs have been posted yet.")
             else:
                 for job in jobs:
-                    st.markdown(f"""
-                    <div class="job-card">
-                        <h4 style="color:white; margin-top:0;">{job.get("title", "Untitled Job")}</h4>
-                        <p style="color:#93c5fd; margin-bottom:8px;"><strong>{job.get("company", "Unknown Company")}</strong></p>
-                        <p style="color:#cbd5e1;"><strong>Description:</strong> {job.get("description", "No description")}</p>
-                        <p style="color:#cbd5e1;"><strong>Required Skills:</strong> {job.get("required_skills", "N/A")}</p>
-                        <p style="color:#cbd5e1;"><strong>Minimum Experience:</strong> {job.get("min_experience", 0)} years</p>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    with st.expander(f"📋 {job.get('title')} — {job.get('company')}"):
+                        st.markdown(f"**Description:** {job.get('description', 'N/A')}")
+                        st.markdown(f"**Required Skills:** {job.get('required_skills', 'N/A')}")
+                        st.markdown(f"**Min Experience:** {job.get('min_experience', 0)} years")
+
+                        col1, col2 = st.columns(2)
+
+                        with col1:
+                            if st.button("✏️ Edit", key=f"edit_{job['id']}"):
+                                st.session_state[f"editing_{job['id']}"] = True
+
+                        with col2:
+                            if st.button("🗑️ Delete", key=f"delete_{job['id']}"):
+                                r = delete_job(job["id"])
+                                if r.status_code == 200:
+                                    st.success("Job deleted.")
+                                    st.rerun()
+                                else:
+                                    st.error("Failed to delete job.")
+
+                        if st.session_state.get(f"editing_{job['id']}"):
+                            with st.form(key=f"edit_form_{job['id']}"):
+                                new_title = st.text_input("Title", value=job.get("title", ""))
+                                new_company = st.text_input("Company", value=job.get("company", ""))
+                                new_description = st.text_area("Description", value=job.get("description", ""), height=150)
+                                new_skills = st.text_input("Required Skills", value=job.get("required_skills", ""))
+                                new_experience = st.number_input("Min Experience", value=int(job.get("min_experience", 0)), min_value=0)
+                                save = st.form_submit_button("💾 Save Changes")
+                                cancel = st.form_submit_button("Cancel")
+
+                            if save:
+                                r = update_job(job["id"], new_title, new_company, new_description, new_skills, new_experience)
+                                if r.status_code == 200:
+                                    st.success("Job updated!")
+                                    st.session_state[f"editing_{job['id']}"] = False
+                                    st.rerun()
+                                else:
+                                    st.error("Failed to update job.")
+
+                            if cancel:
+                                st.session_state[f"editing_{job['id']}"] = False
+                                st.rerun()
         else:
             st.warning("Could not load jobs.")
 
@@ -149,7 +173,7 @@ def render():
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.subheader("Top 20 Candidates by Score")
 
-        response =top_candidates()
+        response = top_candidates()
         if response.status_code != 200:
             try:
                 st.error(response.json().get("detail", "Admin access required"))
@@ -178,8 +202,6 @@ def render():
         selected = option_map[selected_label]
 
         col1, col2 = st.columns(2)
-
-        
 
         with col1:
             st.write("**Applicant:**", selected.get("applicant_name", "N/A"))
