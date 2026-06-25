@@ -2,7 +2,7 @@ import requests
 import streamlit as st
 
 API_BASE_URL = st.secrets.get("API_URL", "http://localhost:8000")
-REQUEST_TIMEOUT = 10
+REQUEST_TIMEOUT = 60
 
 
 # ------------------------------
