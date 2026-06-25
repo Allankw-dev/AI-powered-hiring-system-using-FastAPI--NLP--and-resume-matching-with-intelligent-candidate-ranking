@@ -19,17 +19,14 @@ st.set_page_config(page_title="AI Hiring System", page_icon="🤖", layout="wide
 # ---------------------------
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Exo+2:wght@300;400;600;700&display=swap');
 
 /* ── BASE ── */
 .stApp {
-    background: #000000;
-    background-image:
-        linear-gradient(rgba(0,255,65,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,255,65,0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
-    color: #e0ffe0;
-    font-family: 'Rajdhani', sans-serif;
+    background: radial-gradient(ellipse at top, #0d0221 0%, #090118 40%, #000000 100%);
+    background-attachment: fixed;
+    color: #e2e8f0;
+    font-family: 'Exo 2', sans-serif;
 }
 
 #MainMenu {visibility: hidden;}
@@ -44,88 +41,76 @@ header {visibility: hidden;}
 
 /* ── SIDEBAR ── */
 section[data-testid="stSidebar"] {
-    background: rgba(0, 0, 0, 0.95);
-    border-right: 1px solid rgba(0,255,65,0.2);
+    background: rgba(9, 1, 24, 0.97);
+    border-right: 1px solid rgba(139, 92, 246, 0.2);
 }
 
 /* ── BUTTONS ── */
 div.stButton > button {
-    background: rgba(0,255,65,0.08) !important;
-    border: 1px solid rgba(0,255,65,0.5) !important;
-    color: #00ff41 !important;
-    border-radius: 8px !important;
-    font-family: 'Rajdhani', sans-serif !important;
+    background: linear-gradient(135deg, rgba(139,92,246,0.15), rgba(59,130,246,0.15)) !important;
+    border: 1px solid rgba(139,92,246,0.5) !important;
+    color: #c4b5fd !important;
+    border-radius: 10px !important;
+    font-family: 'Exo 2', sans-serif !important;
     font-weight: 700 !important;
-    font-size: 0.95rem !important;
+    font-size: 0.9rem !important;
     padding: 0.6rem 1.2rem !important;
     letter-spacing: 1px !important;
     transition: all 0.3s ease !important;
-    text-transform: uppercase !important;
-    box-shadow: 0 0 10px rgba(0,255,65,0.1) !important;
+    box-shadow: 0 0 12px rgba(139,92,246,0.2) !important;
 }
 
 div.stButton > button:hover {
-    background: rgba(0,255,65,0.18) !important;
-    box-shadow: 0 0 20px rgba(0,255,65,0.4), inset 0 0 10px rgba(0,255,65,0.1) !important;
-    border-color: #00ff41 !important;
+    background: linear-gradient(135deg, rgba(139,92,246,0.3), rgba(59,130,246,0.3)) !important;
+    box-shadow: 0 0 25px rgba(139,92,246,0.5), 0 0 50px rgba(139,92,246,0.2) !important;
+    border-color: #8b5cf6 !important;
+    color: #ffffff !important;
 }
 
 /* ── INPUTS ── */
 div[data-testid="stTextInput"] input,
 div[data-testid="stTextArea"] textarea,
 div[data-testid="stNumberInput"] input {
-    background: rgba(0,255,65,0.04) !important;
-    border: 1px solid rgba(0,255,65,0.25) !important;
-    border-radius: 8px !important;
-    color: #e0ffe0 !important;
-    font-family: 'Share Tech Mono', monospace !important;
-    font-size: 0.9rem !important;
+    background: rgba(139,92,246,0.05) !important;
+    border: 1px solid rgba(139,92,246,0.25) !important;
+    border-radius: 10px !important;
+    color: #e2e8f0 !important;
+    font-family: 'Exo 2', sans-serif !important;
 }
 
 div[data-testid="stTextInput"] input:focus,
 div[data-testid="stTextArea"] textarea:focus {
-    border-color: #00ff41 !important;
-    box-shadow: 0 0 12px rgba(0,255,65,0.3) !important;
+    border-color: #8b5cf6 !important;
+    box-shadow: 0 0 15px rgba(139,92,246,0.4), 0 0 30px rgba(139,92,246,0.15) !important;
 }
 
 /* ── LABELS ── */
-label, .stTextInput label, .stTextArea label {
-    color: #00ff41 !important;
-    font-family: 'Rajdhani', sans-serif !important;
+label {
+    color: #a78bfa !important;
+    font-family: 'Exo 2', sans-serif !important;
     font-weight: 600 !important;
-    letter-spacing: 1px !important;
-    text-transform: uppercase !important;
-    font-size: 0.8rem !important;
+    letter-spacing: 0.5px !important;
 }
 
 /* ── TABS ── */
 div[data-testid="stTabs"] button {
-    color: rgba(0,255,65,0.6) !important;
-    font-family: 'Rajdhani', sans-serif !important;
-    font-weight: 700 !important;
-    letter-spacing: 1px !important;
-    text-transform: uppercase !important;
-    border-bottom: 2px solid transparent !important;
+    color: rgba(167,139,250,0.6) !important;
+    font-family: 'Exo 2', sans-serif !important;
+    font-weight: 600 !important;
 }
 
 div[data-testid="stTabs"] button[aria-selected="true"] {
-    color: #00ff41 !important;
-    border-bottom: 2px solid #00ff41 !important;
-    text-shadow: 0 0 10px rgba(0,255,65,0.6) !important;
-}
-
-/* ── DATAFRAME ── */
-div[data-testid="stDataFrame"] {
-    border: 1px solid rgba(0,255,65,0.2) !important;
-    border-radius: 8px !important;
+    color: #a78bfa !important;
+    border-bottom: 2px solid #8b5cf6 !important;
+    text-shadow: 0 0 15px rgba(139,92,246,0.8) !important;
 }
 
 /* ── SELECTBOX ── */
 div[data-testid="stSelectbox"] > div {
-    background: rgba(0,255,65,0.04) !important;
-    border: 1px solid rgba(0,255,65,0.25) !important;
-    border-radius: 8px !important;
-    color: #e0ffe0 !important;
+    background: rgba(139,92,246,0.05) !important;
+    border: 1px solid rgba(139,92,246,0.25) !important;
+    border-radius: 10px !important;
+    color: #e2e8f0 !important;
 }
 
 /* ── RADIO NAV ── */
@@ -137,25 +122,23 @@ div[role="radiogroup"] {
 }
 
 div[role="radiogroup"] label {
-    background: rgba(0,255,65,0.05);
-    border: 1px solid rgba(0,255,65,0.2);
-    border-radius: 8px;
+    background: rgba(139,92,246,0.06);
+    border: 1px solid rgba(139,92,246,0.2);
+    border-radius: 10px;
     padding: 6px 14px;
     transition: all 0.2s ease;
 }
 
 div[role="radiogroup"] label:hover {
-    background: rgba(0,255,65,0.12);
-    border-color: rgba(0,255,65,0.5);
+    background: rgba(139,92,246,0.15);
+    border-color: rgba(139,92,246,0.5);
+    box-shadow: 0 0 12px rgba(139,92,246,0.3);
 }
 
 div[role="radiogroup"] label p {
-    color: #00ff41 !important;
-    font-family: 'Rajdhani', sans-serif !important;
+    color: #c4b5fd !important;
+    font-family: 'Exo 2', sans-serif !important;
     font-weight: 600 !important;
-    letter-spacing: 1px !important;
-    font-size: 0.85rem !important;
-    text-transform: uppercase !important;
 }
 
 div[data-testid="stRadio"] > label {
@@ -164,14 +147,20 @@ div[data-testid="stRadio"] > label {
 
 /* ── ALERTS ── */
 div[data-testid="stAlert"] {
-    border-radius: 8px !important;
-    border-left: 3px solid #00ff41 !important;
-    background: rgba(0,255,65,0.06) !important;
+    border-radius: 10px !important;
+    border-left: 3px solid #8b5cf6 !important;
+    background: rgba(139,92,246,0.08) !important;
 }
 
 /* ── DIVIDER ── */
 hr {
-    border-color: rgba(0,255,65,0.15) !important;
+    border-color: rgba(139,92,246,0.2) !important;
+}
+
+/* ── DATAFRAME ── */
+div[data-testid="stDataFrame"] {
+    border: 1px solid rgba(139,92,246,0.2) !important;
+    border-radius: 10px !important;
 }
 
 /* ── CUSTOM COMPONENTS ── */
@@ -179,49 +168,50 @@ hr {
     font-family: 'Orbitron', sans-serif;
     font-size: 2.4rem;
     font-weight: 900;
-    color: #00ff41;
-    text-shadow: 0 0 20px rgba(0,255,65,0.6), 0 0 40px rgba(0,255,65,0.3);
-    letter-spacing: 3px;
-    text-transform: uppercase;
+    background: linear-gradient(135deg, #a78bfa, #60a5fa, #c084fc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: none;
+    filter: drop-shadow(0 0 20px rgba(139,92,246,0.6));
+    letter-spacing: 2px;
     margin-bottom: 0.3rem;
 }
 
 .cyber-subtitle {
-    font-family: 'Share Tech Mono', monospace;
-    color: rgba(0,255,65,0.6);
-    font-size: 0.9rem;
-    letter-spacing: 2px;
+    color: rgba(167,139,250,0.7);
+    font-size: 1rem;
+    letter-spacing: 1px;
     margin-bottom: 1.5rem;
 }
 
 .glass-card {
-    background: rgba(0,255,65,0.03);
-    border: 1px solid rgba(0,255,65,0.15);
-    border-radius: 12px;
+    background: rgba(139,92,246,0.04);
+    border: 1px solid rgba(139,92,246,0.18);
+    border-radius: 16px;
     padding: 1.5rem;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(0,255,65,0.1);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 20px rgba(139,92,246,0.05), inset 0 1px 0 rgba(139,92,246,0.1);
     margin-bottom: 1rem;
+    transition: all 0.3s ease;
 }
 
 .glass-card:hover {
-    border-color: rgba(0,255,65,0.3);
-    box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 20px rgba(0,255,65,0.08), inset 0 1px 0 rgba(0,255,65,0.1);
+    border-color: rgba(139,92,246,0.35);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 30px rgba(139,92,246,0.15), inset 0 1px 0 rgba(139,92,246,0.15);
 }
 
 .nav-bar {
-    background: rgba(0,0,0,0.8);
-    border: 1px solid rgba(0,255,65,0.2);
-    border-radius: 12px;
+    background: rgba(9,1,24,0.85);
+    border: 1px solid rgba(139,92,246,0.25);
+    border-radius: 14px;
     padding: 12px 18px;
     margin-bottom: 16px;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 0 30px rgba(0,255,65,0.05);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 0 30px rgba(139,92,246,0.08), inset 0 1px 0 rgba(139,92,246,0.1);
 }
 
 .nav-label {
-    font-family: 'Share Tech Mono', monospace;
-    color: rgba(0,255,65,0.5);
+    color: rgba(167,139,250,0.5);
     font-size: 0.7rem;
     letter-spacing: 3px;
     text-transform: uppercase;
@@ -229,33 +219,33 @@ hr {
 }
 
 .status-box {
-    padding: 0.7rem 1rem;
-    border-radius: 8px;
+    padding: 0.7rem 1.2rem;
+    border-radius: 10px;
     margin-bottom: 1rem;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.85rem;
-    letter-spacing: 1px;
+    font-size: 0.9rem;
+    font-weight: 600;
 }
 
 .status-admin {
-    background: rgba(0,255,65,0.06);
-    color: #00ff41;
-    border: 1px solid rgba(0,255,65,0.3);
-    box-shadow: 0 0 15px rgba(0,255,65,0.1);
+    background: rgba(139,92,246,0.1);
+    color: #c4b5fd;
+    border: 1px solid rgba(139,92,246,0.35);
+    box-shadow: 0 0 20px rgba(139,92,246,0.15), inset 0 0 20px rgba(139,92,246,0.05);
 }
 
 .status-candidate {
-    background: rgba(0,200,255,0.06);
-    color: #00c8ff;
-    border: 1px solid rgba(0,200,255,0.3);
-    box-shadow: 0 0 15px rgba(0,200,255,0.1);
+    background: rgba(59,130,246,0.1);
+    color: #93c5fd;
+    border: 1px solid rgba(59,130,246,0.35);
+    box-shadow: 0 0 20px rgba(59,130,246,0.15), inset 0 0 20px rgba(59,130,246,0.05);
 }
 
 .neon-divider {
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(0,255,65,0.4), transparent);
+    background: linear-gradient(90deg, transparent, rgba(139,92,246,0.6), rgba(59,130,246,0.6), transparent);
     margin: 1rem 0;
     border: none;
+    box-shadow: 0 0 10px rgba(139,92,246,0.3);
 }
 </style>
 """, unsafe_allow_html=True)
@@ -332,7 +322,7 @@ nav_pages = [
 
 current_nav_page = st.session_state.page if st.session_state.page in nav_pages else "Home"
 
-st.markdown('<div class="nav-bar"><div class="nav-label">// SYSTEM NAVIGATION</div>', unsafe_allow_html=True)
+st.markdown('<div class="nav-bar"><div class="nav-label">Navigation</div>', unsafe_allow_html=True)
 
 col_nav, col_user = st.columns([9, 1])
 
@@ -347,7 +337,7 @@ with col_nav:
 
 with col_user:
     if is_logged_in():
-        if st.button("⏻ EXIT"):
+        if st.button("Logout"):
             logout()
 
 st.markdown('</div>', unsafe_allow_html=True)
@@ -364,12 +354,12 @@ st.markdown('<div class="neon-divider"></div>', unsafe_allow_html=True)
 if is_logged_in() and st.session_state.user_email:
     if is_admin():
         st.markdown(
-            f'<div class="status-box status-admin">▶ ADMIN ACCESS GRANTED // {st.session_state.user_email}</div>',
+            f'<div class="status-box status-admin">🛡️ Logged in as Admin • {st.session_state.user_email}</div>',
             unsafe_allow_html=True
         )
     elif is_candidate():
         st.markdown(
-            f'<div class="status-box status-candidate">▶ CANDIDATE SESSION ACTIVE // {st.session_state.user_email}</div>',
+            f'<div class="status-box status-candidate">👤 Logged in as Candidate • {st.session_state.user_email}</div>',
             unsafe_allow_html=True
         )
 
