@@ -10,7 +10,6 @@ class Settings(BaseSettings):
     SQL_SERVER: str = r"localhost\SQLEXPRESS"
     SQL_DATABASE: str = "AIHiringDB"
     SQL_DRIVER: str = "ODBC Driver 17 for SQL Server"
-    DATABASE_URL: str = "postgresql://ai_hiring_db_dnib_user:DuuC6VDU3LccQkMpqN9wLIl5AFVQpWHa@dpg-d8o11rgjs32c73e70l9g-a.oregon-postgres.render.com/ai_hiring_db_dnib"
 
     ADMIN_EMAIL: str = "allankamau20@gmail.com"
     ADMIN_EMAIL_PASSWORD: str = "your_app_password_here"
