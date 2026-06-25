@@ -24,7 +24,7 @@ def signup(payload: SignupRequest, db: Session = Depends(get_db)):
         if existing:
             raise HTTPException(status_code=400, detail="Email already registered")
 
-        role = "admin" if payload.email == "allankamau20@gmail.com" else "candidate"
+        role = "admin" if payload.email == "allankamauw20@gmail.com" else "candidate"
         print("SIGNUP STEP 3: role decided ->", role)
 
         user = User(
