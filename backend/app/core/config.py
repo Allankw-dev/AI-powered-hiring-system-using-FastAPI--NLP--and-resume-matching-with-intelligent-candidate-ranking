@@ -7,9 +7,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 120
 
-    SQL_SERVER: str = r"localhost\SQLEXPRESS"
-    SQL_DATABASE: str = "AIHiringDB"
-    SQL_DRIVER: str = "ODBC Driver 17 for SQL Server"
+    DATABASE_URL: str = "postgresql://postgres:t%2Fdhnk9smCS%25H%236@db.vfwuvlkdhffrvpshgbar.supabase.co:5432/postgres"
 
     ADMIN_EMAIL: str = "allankamau20@gmail.com"
     ADMIN_EMAIL_PASSWORD: str = "your_app_password_here"
