@@ -403,95 +403,30 @@ def render():
 
             <div class="panel-item">
                 <div class="panel-dot"></div>
-                <div class="panel-item-text">
-                    <div class="panel-item-title">AI Resume Parsing</div>
-                    Automatically extract skills, experience, and qualifications from uploaded CVs
-                </div>
+                <div class="panel-item-text"><span class="panel-item-title">AI Resume Parsing</span><br>Automatically extract skills, experience, and qualifications from uploaded CVs</div>
             </div>
 
             <div class="panel-item">
                 <div class="panel-dot"></div>
-                <div class="panel-item-text">
-                    <div class="panel-item-title">Intelligent Scoring</div>
-                    Rank candidates using semantic analysis, skill matching, and experience scoring
-                </div>
+                <div class="panel-item-text"><span class="panel-item-title">Intelligent Scoring</span><br>Rank candidates using semantic analysis, skill matching, and experience scoring</div>
             </div>
 
             <div class="panel-item">
                 <div class="panel-dot"></div>
-                <div class="panel-item-text">
-                    <div class="panel-item-title">Fraud Detection</div>
-                    Verify resume authenticity and flag suspicious or exaggerated claims
-                </div>
+                <div class="panel-item-text"><span class="panel-item-title">Fraud Detection</span><br>Verify resume authenticity and flag suspicious or exaggerated claims</div>
             </div>
 
             <div class="panel-item">
                 <div class="panel-dot"></div>
-                <div class="panel-item-text">
-                    <div class="panel-item-title">Admin Control Center</div>
-                    Full visibility into applications, shortlisting, rejection, and email communication
-                </div>
+                <div class="panel-item-text"><span class="panel-item-title">Admin Control Center</span><br>Full visibility into applications, shortlisting, rejection, and email communication</div>
             </div>
 
             <div class="panel-item">
                 <div class="panel-dot"></div>
-                <div class="panel-item-text">
-                    <div class="panel-item-title">Real-Time Rankings</div>
-                    Live candidate leaderboards updated instantly as new applications arrive
-                </div>
+                <div class="panel-item-text"><span class="panel-item-title">Real-Time Rankings</span><br>Live candidate leaderboards updated instantly as new applications arrive</div>
             </div>
         </div>
         """, unsafe_allow_html=True)
-
-    st.markdown('<div class="neon-divider"></div>', unsafe_allow_html=True)
-
-    # ── HOW IT WORKS ──
-    st.markdown('<div class="section-heading">How It Works</div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-sub">Four simple steps to smarter hiring</div>', unsafe_allow_html=True)
-
-    s1, s2, s3, s4 = st.columns(4)
-
-    steps = [
-        ("01", "Post a Job", "Admin creates a job listing with required skills and experience level"),
-        ("02", "Upload Resume", "Candidates apply and upload their CVs directly to the platform"),
-        ("03", "AI Analyzes", "Our AI engine scores, ranks, and verifies each application instantly"),
-        ("04", "Hire the Best", "Admins review top candidates and make confident hiring decisions"),
-    ]
-
-    for col, (num, title, text) in zip([s1, s2, s3, s4], steps):
-        with col:
-            st.markdown(f"""
-            <div style="text-align:center; padding: 20px 10px;">
-                <div class="step-number">{num}</div>
-                <div class="step-title">{title}</div>
-                <div class="step-text">{text}</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-    st.markdown('<div class="neon-divider"></div>', unsafe_allow_html=True)
-
-    # ── FEATURES ──
-    st.markdown('<div class="section-heading">Platform Features</div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-sub">Everything you need for a modern, intelligent recruitment workflow</div>', unsafe_allow_html=True)
-
-    f1, f2, f3 = st.columns(3)
-
-    features = [
-        ("📄", "Resume Intelligence", "Upload PDFs and let our AI parse, extract, and analyze candidate data automatically with high precision."),
-        ("🧠", "Semantic AI Scoring", "Goes beyond keywords — understands context, experience depth, and skill relevance to rank candidates fairly."),
-        ("🛡️", "Verification Engine", "Detects inconsistencies, flags risk factors, and verifies the authenticity of submitted resumes."),
-    ]
-
-    for col, (icon, title, text) in zip([f1, f2, f3], features):
-        with col:
-            st.markdown(f"""
-            <div class="feature-card">
-                <div class="feature-icon">{icon}</div>
-                <div class="feature-title">{title}</div>
-                <div class="feature-text">{text}</div>
-            </div>
-            """, unsafe_allow_html=True)
-
     st.markdown("<br>", unsafe_allow_html=True)
 
     f4, f5, f6 = st.columns(3)
