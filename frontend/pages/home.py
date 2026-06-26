@@ -400,27 +400,22 @@ def render():
         st.markdown("""
         <div class="side-panel">
             <div class="panel-title">// Platform Capabilities</div>
-
             <div class="panel-item">
                 <div class="panel-dot"></div>
                 <div class="panel-item-text"><span class="panel-item-title">AI Resume Parsing</span><br>Automatically extract skills, experience, and qualifications from uploaded CVs</div>
             </div>
-
             <div class="panel-item">
                 <div class="panel-dot"></div>
                 <div class="panel-item-text"><span class="panel-item-title">Intelligent Scoring</span><br>Rank candidates using semantic analysis, skill matching, and experience scoring</div>
             </div>
-
             <div class="panel-item">
                 <div class="panel-dot"></div>
                 <div class="panel-item-text"><span class="panel-item-title">Fraud Detection</span><br>Verify resume authenticity and flag suspicious or exaggerated claims</div>
             </div>
-
             <div class="panel-item">
                 <div class="panel-dot"></div>
                 <div class="panel-item-text"><span class="panel-item-title">Admin Control Center</span><br>Full visibility into applications, shortlisting, rejection, and email communication</div>
             </div>
-
             <div class="panel-item">
                 <div class="panel-dot"></div>
                 <div class="panel-item-text"><span class="panel-item-title">Real-Time Rankings</span><br>Live candidate leaderboards updated instantly as new applications arrive</div>
