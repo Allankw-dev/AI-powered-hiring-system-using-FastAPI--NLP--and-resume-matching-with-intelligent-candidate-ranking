@@ -233,7 +233,7 @@ def update_my_profile(full_name, email):
 
 def upload_profile_picture(file):
     return requests.post(
-        f"{API_BASE_URL}/profile/upload-picture",
+        f"{API_BASE_URL}/profile/me/upload-picture",
         headers=get_headers_without_content_type(),
         files={"file": (file.name, file, file.type)},
         timeout=REQUEST_TIMEOUT
