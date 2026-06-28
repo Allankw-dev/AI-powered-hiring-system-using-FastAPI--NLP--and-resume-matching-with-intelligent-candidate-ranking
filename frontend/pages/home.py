@@ -4,19 +4,6 @@ import streamlit.components.v1 as components
 
 def render():
 
-    # ── LISTEN FOR NAVIGATION MESSAGES FROM THE HERO IFRAME ──
-    nav = components.html("""
-    <script>
-        window.addEventListener('message', function(e) {
-            if (e.data && e.data.type === 'navigate') {
-                // Send to streamlit via query param trick
-                window.parent.postMessage({type: 'streamlit:setComponentValue', value: e.data.page}, '*');
-            }
-        });
-    </script>
-    """, height=0)
-
-    # ── FULL HERO SECTION WITH LIVE PARTICLE BACKGROUND ──
     result = components.html("""
     <!DOCTYPE html>
     <html>
@@ -105,31 +92,27 @@ def render():
             letter-spacing: 1px; text-transform: uppercase; margin-top: 4px;
         }
 
-        .btn-row {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
-        }
+        .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
         .btn {
             padding: 12px 20px; border-radius: 10px; border: none;
             font-family: 'Exo 2', sans-serif; font-size: 14px; font-weight: 700;
             cursor: pointer; transition: all 0.2s; letter-spacing: 0.5px;
+            white-space: nowrap;
         }
 
         .btn-primary {
             background: linear-gradient(135deg, #7c3aed, #4f46e5);
-            color: white;
-            box-shadow: 0 0 20px rgba(124,58,237,0.4);
+            color: white; box-shadow: 0 0 20px rgba(124,58,237,0.4);
         }
         .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 30px rgba(124,58,237,0.6); }
 
         .btn-secondary {
             background: rgba(139,92,246,0.1);
-            color: #a78bfa;
-            border: 1px solid rgba(139,92,246,0.4);
+            color: #a78bfa; border: 1px solid rgba(139,92,246,0.4);
         }
         .btn-secondary:hover { background: rgba(139,92,246,0.2); transform: translateY(-2px); }
 
-        /* Side panel */
         .side-panel {
             background: rgba(4,6,22,0.85);
             border: 1px solid rgba(139,92,246,0.25);
@@ -159,24 +142,16 @@ def render():
         }
 
         .panel-item:hover { border-color: rgba(139,92,246,0.3); }
+        .panel-dot { width:7px; height:7px; border-radius:50%; background:#8b5cf6; box-shadow:0 0 8px rgba(139,92,246,1); margin-top:5px; flex-shrink:0; }
+        .panel-item-text { color:#94a3b8; font-size:12px; line-height:1.5; }
+        .panel-item-title { font-weight:700; color:#e2e8f0; margin-bottom:2px; display:block; }
 
-        .panel-dot {
-            width: 7px; height: 7px; border-radius: 50%;
-            background: #8b5cf6; box-shadow: 0 0 8px rgba(139,92,246,1);
-            margin-top: 5px; flex-shrink: 0;
-        }
-
-        .panel-item-text { color: #94a3b8; font-size: 12px; line-height: 1.5; }
-        .panel-item-title { font-weight: 700; color: #e2e8f0; margin-bottom: 2px; display: block; }
-
-        /* Divider */
         .neon-divider {
             height: 1px;
             background: linear-gradient(90deg, transparent, rgba(139,92,246,0.6), rgba(59,130,246,0.6), transparent);
             margin: 32px 0; border: none;
         }
 
-        /* Section headings */
         .section-heading {
             font-family: 'Orbitron', sans-serif; font-size: 24px; font-weight: 700;
             text-align: center; background: linear-gradient(90deg, #a78bfa, #60a5fa);
@@ -184,23 +159,17 @@ def render():
             margin-bottom: 6px; letter-spacing: 1px;
         }
 
-        .section-sub {
-            text-align: center; color: #64748b;
-            font-size: 12px; margin-bottom: 24px; letter-spacing: 1px;
-        }
+        .section-sub { text-align:center; color:#64748b; font-size:12px; margin-bottom:24px; letter-spacing:1px; }
 
-        /* Steps */
         .steps-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            display: grid; grid-template-columns: repeat(4, 1fr);
             gap: 12px; margin-bottom: 16px;
         }
 
         .step {
             text-align: center; padding: 20px 12px;
             background: rgba(4,6,22,0.85); border: 1px solid rgba(139,92,246,0.2);
-            border-radius: 14px; transition: all 0.3s;
-            backdrop-filter: blur(12px);
+            border-radius: 14px; transition: all 0.3s; backdrop-filter: blur(12px);
         }
 
         .step:hover { border-color:rgba(139,92,246,.4); transform:translateY(-4px); }
@@ -208,10 +177,8 @@ def render():
         .step-title { font-weight:700; color:#e2e8f0; font-size:13px; margin-bottom:4px; }
         .step-text { color:#64748b; font-size:11px; line-height:1.5; }
 
-        /* Features */
         .feature-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            display: grid; grid-template-columns: repeat(3, 1fr);
             gap: 12px; margin-bottom: 16px;
         }
 
@@ -228,7 +195,6 @@ def render():
         .feature-title { font-family:'Orbitron',sans-serif; font-size:12px; font-weight:700; color:#e2e8f0; margin-bottom:6px; }
         .feature-text { color:#64748b; font-size:11px; line-height:1.6; }
 
-        /* CTA */
         .cta-wrapper {
             background: radial-gradient(ellipse at center, rgba(139,92,246,0.15) 0%, transparent 70%);
             border: 1px solid rgba(139,92,246,0.3); border-radius: 24px;
@@ -239,10 +205,7 @@ def render():
         .cta-wrapper::before { content:''; position:absolute; top:0; left:0; right:0; height:1.5px; background:linear-gradient(90deg,transparent,#8b5cf6,#60a5fa,transparent); }
         .cta-title { font-family:'Orbitron',sans-serif; font-size:26px; font-weight:900; color:white; margin-bottom:8px; }
         .cta-text { color:#94a3b8; font-size:13px; margin-bottom:24px; }
-
-        .cta-btn-row {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
-        }
+        .cta-btn-row { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
 
         @media (max-width: 700px) {
             .hero-grid { grid-template-columns: 1fr; }
@@ -260,7 +223,6 @@ def render():
     <canvas id="c"></canvas>
 
     <div class="content">
-        <!-- HERO -->
         <div class="hero-grid">
             <div>
                 <div class="hero-badge">⚡ Next-Gen AI Recruitment Platform</div>
@@ -298,7 +260,6 @@ def render():
 
         <div class="neon-divider"></div>
 
-        <!-- HOW IT WORKS -->
         <div class="section-heading">How It Works</div>
         <div class="section-sub">// Four steps to smarter hiring</div>
         <div class="steps-grid">
@@ -310,7 +271,6 @@ def render():
 
         <div class="neon-divider"></div>
 
-        <!-- FEATURES -->
         <div class="section-heading">Platform Features</div>
         <div class="section-sub">// Everything for modern intelligent recruitment</div>
         <div class="feature-grid">
@@ -324,7 +284,6 @@ def render():
 
         <div class="neon-divider"></div>
 
-        <!-- CTA -->
         <div class="cta-wrapper">
             <div class="cta-title">Ready to Transform Your Hiring?</div>
             <div class="cta-text">Join the future of recruitment. Set up in minutes, hire better forever.</div>
@@ -337,10 +296,19 @@ def render():
     </div>
 
     <script>
-        // ── NAVIGATION: send page name to Streamlit via postMessage ──
         function navigate(page) {
             window.parent.postMessage({type: 'streamlit:setComponentValue', value: page}, '*');
         }
+
+        // ── AUTO-RESIZE iframe to full content height ──
+        function sendHeight() {
+            const h = document.body.scrollHeight;
+            window.parent.postMessage({type: 'streamlit:setFrameHeight', height: h}, '*');
+        }
+        window.addEventListener('load', sendHeight);
+        window.addEventListener('resize', sendHeight);
+        setTimeout(sendHeight, 300);
+        setTimeout(sendHeight, 800);
 
         // ── PARTICLE ANIMATION ──
         const canvas = document.getElementById('c');
@@ -414,9 +382,8 @@ def render():
     </script>
     </body>
     </html>
-    """, height=2200, scrolling=False)
+    """, height=4500, scrolling=False)
 
-    # ── HANDLE NAVIGATION FROM IFRAME BUTTONS ──
     if result and isinstance(result, str):
         st.session_state.page = result
         st.rerun()
