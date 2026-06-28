@@ -1,6 +1,8 @@
 import requests
 import streamlit as st
 from api import login
+import time
+import streamlit.components.v1 as components
 
 
 def render():
@@ -177,25 +179,89 @@ def render():
                 try:
                     with st.spinner("Authenticating..."):
                         response = login(email, password)
-                    if response.status_code == 200:
-                        data = response.json()
-                        st.session_state["token"] = data.get("access_token")
-                        st.session_state["role"] = data.get("role", "candidate")
-                        st.session_state["user_email"] = email
-                        role = data.get("role", "candidate")
-                        if role == "admin":
-                            st.session_state["page"] = "Admin Panel"
+                        if response.status_code == 200:
+                            data = response.json()
+
+                            # Save session
+                            st.session_state["token"] = data.get("access_token")
+                            st.session_state["role"] = data.get("role", "candidate")
+                            st.session_state["user_email"] = email
+
+                            role = data.get("role", "candidate")
+                            st.session_state["page"] = "Admin Panel" if role == "admin" else "Dashboard"
+
+                            # Success message
+                            st.success("✅ Access granted! Welcome back.")
+
+                            # Balloons
+                            st.balloons()
+
+                            # Fireworks / Confetti
+                            components.html(
+                                """
+                                <html>
+                                <head>
+                                    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+                                </head>
+                                <body>
+                                <script>
+
+                                const end = Date.now() + 3000;
+
+                                (function frame() {
+
+                                    confetti({
+                                        particleCount: 8,
+                                        angle: 60,
+                                        spread: 70,
+                                        origin: { x: 0 },
+                                        colors: ['#8b5cf6','#60a5fa','#c084fc','#ffffff']
+                                    });
+
+                                    confetti({
+                                        particleCount: 8,
+                                        angle: 120,
+                                        spread: 70,
+                                        origin: { x: 1 },
+                                        colors: ['#8b5cf6','#60a5fa','#c084fc','#ffffff']
+                                    });
+
+                                    confetti({
+                                        particleCount: 5,
+                                        spread: 360,
+                                        startVelocity: 35,
+                                        ticks: 80,
+                                        origin: {
+                                            x: Math.random(),
+                                            y: Math.random() * 0.5
+                                        },
+                                        colors: ['#8b5cf6','#60a5fa','#c084fc','#ffffff']
+                                    });
+
+                                    if (Date.now() < end) {
+                                        requestAnimationFrame(frame);
+                                    }
+
+                                })();
+
+                                </script>
+                                </body>
+                                </html>
+                                """,
+                                height=0,
+                            )
+
+                            # Small delay so the user sees the celebration
+                            time.sleep(3)
+
+                            # Go to dashboard
+                            st.rerun()
+
                         else:
-                            st.session_state["page"] = "Dashboard"
-                        st.success("✅ Access granted!")
-                        st.balloons()
-                        st.rerun()
-     
-                    else:
-                        try:
-                            st.error(response.json().get("detail", "Login failed."))
-                        except Exception:
-                            st.error("Login failed.")
+                            try:
+                                st.error(response.json().get("detail", "Login failed."))
+                            except Exception:
+                                st.error("Login failed.")
 
                 except requests.exceptions.Timeout:
                     st.warning("⏳ Server waking up — try again in 30 seconds.")
