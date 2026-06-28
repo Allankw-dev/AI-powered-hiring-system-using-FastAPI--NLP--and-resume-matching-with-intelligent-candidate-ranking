@@ -175,6 +175,11 @@ def render():
                         st.session_state["token"] = data.get("access_token")
                         st.session_state["role"] = data.get("role", "candidate")
                         st.session_state["user_email"] = email
+                        role = data.get("role", "candidate")
+                        if role == "admin":
+                            st.session_state["page"] = "Admin Panel"
+                        else:
+                            st.session_state["page"] = "Dashboard"
                         st.success("✅ Access granted!")
                         st.rerun()
                     else:
