@@ -2,7 +2,6 @@ import requests
 import streamlit as st
 from api import login
 import time
-import streamlit.components.v1 as components
 
 
 def render():
@@ -10,46 +9,6 @@ def render():
         if st.session_state.get("just_logged_in"):
             st.session_state.pop("just_logged_in")
             st.balloons()
-            components.html("""
-                <html>
-                <head>
-                    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
-                </head>
-                <body>
-                <script>
-                const end = Date.now() + 3000;
-                (function frame() {
-                    confetti({
-                        particleCount: 8,
-                        angle: 60,
-                        spread: 70,
-                        origin: { x: 0 },
-                        colors: ['#8b5cf6','#60a5fa','#c084fc','#ffffff']
-                    });
-                    confetti({
-                        particleCount: 8,
-                        angle: 120,
-                        spread: 70,
-                        origin: { x: 1 },
-                        colors: ['#8b5cf6','#60a5fa','#c084fc','#ffffff']
-                    });
-                    confetti({
-                        particleCount: 5,
-                        spread: 360,
-                        startVelocity: 35,
-                        ticks: 80,
-                        origin: {
-                            x: Math.random(),
-                            y: Math.random() * 0.5
-                        },
-                        colors: ['#8b5cf6','#60a5fa','#c084fc','#ffffff']
-                    });
-                    if (Date.now() < end) requestAnimationFrame(frame);
-                })();
-                </script>
-                </body>
-                </html>
-            """, height=1)
             time.sleep(3)
 
         role = st.session_state.get("role", "candidate")
