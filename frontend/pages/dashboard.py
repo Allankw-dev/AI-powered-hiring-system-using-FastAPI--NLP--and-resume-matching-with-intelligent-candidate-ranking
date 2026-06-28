@@ -37,6 +37,7 @@ def render():
         border-radius: 16px;
         backdrop-filter: blur(20px);
         position: relative; overflow: hidden;
+        flex-wrap: wrap; gap: 12px;
     }
 
     .dash-header::before {
@@ -55,6 +56,15 @@ def render():
         border-radius: 999px;
         font-family: 'Exo 2', sans-serif;
         font-size: 12px; color: #a78bfa; letter-spacing: 1px;
+        white-space: nowrap;
+    }
+
+    /* ── STAT CARDS ── */
+    .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        gap: 12px;
+        margin-bottom: 16px;
     }
 
     .stat-card {
@@ -81,6 +91,14 @@ def render():
 
     .section-label { font-family:'Orbitron',sans-serif; font-size:11px; font-weight:700; color:rgba(139,92,246,.7); letter-spacing:3px; text-transform:uppercase; margin-bottom:14px; }
 
+    /* ── QUICK ACTIONS ── */
+    .action-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+
     .action-card {
         background: rgba(4,6,22,.8);
         border: 1px solid rgba(139,92,246,.15);
@@ -91,6 +109,7 @@ def render():
     .action-icon { font-size:26px; margin-bottom:8px; filter:drop-shadow(0 0 8px rgba(139,92,246,.5)); }
     .action-label { font-family:'Exo 2',sans-serif; color:rgba(148,163,184,.8); font-size:13px; font-weight:600; }
 
+    /* ── APPLICATION CARDS ── */
     .app-card {
         background: rgba(4,6,22,.8);
         border: 1px solid rgba(139,92,246,.15);
@@ -103,6 +122,7 @@ def render():
         display:flex; justify-content:space-between; align-items:center;
         padding:14px 18px; background:rgba(139,92,246,.04);
         border-bottom:1px solid rgba(139,92,246,.08);
+        flex-wrap: wrap; gap: 4px;
     }
     .app-job { font-family:'Exo 2',sans-serif; font-weight:700; color:#e2e8f0; font-size:14px; }
     .app-date { font-family:'Exo 2',sans-serif; color:rgba(100,116,139,.6); font-size:12px; }
@@ -117,6 +137,17 @@ def render():
     .score-row { display:flex; gap:8px; flex-wrap:wrap; }
     .score-chip { background:rgba(59,130,246,.07); border:1px solid rgba(59,130,246,.18); border-radius:7px; padding:5px 10px; font-family:'Exo 2',sans-serif; font-size:11px; color:#93c5fd; }
     .score-chip span { font-weight:700; color:#60a5fa; }
+
+    /* ── MOBILE OVERRIDES ── */
+    @media (max-width: 640px) {
+        .header-title { font-size: 1.2rem; }
+        .dash-header { padding: 14px 16px; }
+        .stat-number { font-size: 28px; }
+        .stat-card { padding: 16px 12px; }
+        .score-chip { font-size: 10px; padding: 4px 8px; }
+        .app-date { display: none; }
+        .action-grid { grid-template-columns: repeat(2, 1fr); }
+    }
     </style>
 
     <div class="city-bg"></div>
@@ -144,64 +175,59 @@ def render():
     </div>
     """, unsafe_allow_html=True)
 
-    # ── STAT CARDS ──
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
-        st.markdown(f"""
+    # ── STAT CARDS (CSS grid — collapses cleanly on mobile) ──
+    st.markdown(f"""
+    <div class="stat-grid">
         <div class="stat-card">
             <div class="stat-icon">📄</div>
             <div class="stat-label">My Resumes</div>
             <div class="stat-number">{resume_count}</div>
         </div>
-        """, unsafe_allow_html=True)
-
-    with c2:
-        st.markdown(f"""
         <div class="stat-card">
             <div class="stat-icon">📨</div>
             <div class="stat-label">Applications</div>
             <div class="stat-number">{application_count}</div>
         </div>
-        """, unsafe_allow_html=True)
-
-    with c3:
-        st.markdown(f"""
         <div class="stat-card">
             <div class="stat-icon">💼</div>
             <div class="stat-label">Available Jobs</div>
             <div class="stat-number">{job_count}</div>
         </div>
-        """, unsafe_allow_html=True)
+    </div>
+    """, unsafe_allow_html=True)
 
     st.markdown('<div class="neon-divider"></div>', unsafe_allow_html=True)
 
-    # ── QUICK ACTIONS ──
+    # ── QUICK ACTIONS (CSS grid — 2 cols on mobile, 4 on desktop) ──
     st.markdown('<div class="section-label">// Quick Actions</div>', unsafe_allow_html=True)
 
-    q1, q2, q3, q4 = st.columns(4)
+    st.markdown("""
+    <div class="action-grid">
+        <div class="action-card"><div class="action-icon">💼</div><div class="action-label">Browse Jobs</div></div>
+        <div class="action-card"><div class="action-icon">📤</div><div class="action-label">Upload Resume</div></div>
+        <div class="action-card"><div class="action-icon">📋</div><div class="action-label">My Applications</div></div>
+        <div class="action-card"><div class="action-icon">👤</div><div class="action-label">My Profile</div></div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    with q1:
-        st.markdown('<div class="action-card"><div class="action-icon">💼</div><div class="action-label">Browse Jobs</div></div>', unsafe_allow_html=True)
-        if st.button("Go →", key="go_jobs"):
+    # Buttons in a 2x2 grid on mobile via st.columns (Streamlit handles this better at 2 cols)
+    b1, b2 = st.columns(2)
+    with b1:
+        if st.button("💼 Browse Jobs", key="go_jobs", use_container_width=True):
             st.session_state.page = "Jobs"
             st.rerun()
-
-    with q2:
-        st.markdown('<div class="action-card"><div class="action-icon">📤</div><div class="action-label">Upload Resume</div></div>', unsafe_allow_html=True)
-        if st.button("Go →", key="go_resume"):
+    with b2:
+        if st.button("📤 Upload Resume", key="go_resume", use_container_width=True):
             st.session_state.page = "Upload Resume"
             st.rerun()
 
-    with q3:
-        st.markdown('<div class="action-card"><div class="action-icon">📋</div><div class="action-label">My Applications</div></div>', unsafe_allow_html=True)
-        if st.button("Go →", key="go_apps"):
+    b3, b4 = st.columns(2)
+    with b3:
+        if st.button("📋 My Applications", key="go_apps", use_container_width=True):
             st.session_state.page = "Applications"
             st.rerun()
-
-    with q4:
-        st.markdown('<div class="action-card"><div class="action-icon">👤</div><div class="action-label">My Profile</div></div>', unsafe_allow_html=True)
-        if st.button("Go →", key="go_profile"):
+    with b4:
+        if st.button("👤 My Profile", key="go_profile", use_container_width=True):
             st.session_state.page = "Profile"
             st.rerun()
 
