@@ -3,6 +3,15 @@ from api import sign_up
 
 
 def render():
+      # Redirect if already logged in
+    if st.session_state.get("token"):
+        role = st.session_state.get("role", "candidate")
+        if role == "admin":
+            st.session_state["page"] = "Admin Panel"
+        else:
+            st.session_state["page"] = "Dashboard"
+        st.rerun()
+        
     st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Exo+2:wght@300;400;600;700&display=swap');
