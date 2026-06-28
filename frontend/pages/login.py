@@ -177,7 +177,6 @@ def render():
                 try:
                     with st.spinner("Authenticating..."):
                         response = login(email, password)
-
                     if response.status_code == 200:
                         data = response.json()
                         st.session_state["token"] = data.get("access_token")
@@ -189,7 +188,9 @@ def render():
                         else:
                             st.session_state["page"] = "Dashboard"
                         st.success("✅ Access granted!")
+                        st.balloons()
                         st.rerun()
+     
                     else:
                         try:
                             st.error(response.json().get("detail", "Login failed."))
