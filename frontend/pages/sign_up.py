@@ -136,6 +136,7 @@ def render():
 
                 if response.status_code in [200, 201]:
                     st.success("✅ Account created! Logging you in...")
+                    st.balloons()
                     with st.spinner("Logging in..."):
                         login_response = login(email, password)
                     if login_response.status_code == 200:
