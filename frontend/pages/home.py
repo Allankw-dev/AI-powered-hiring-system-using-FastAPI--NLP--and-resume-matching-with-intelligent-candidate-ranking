@@ -1,91 +1,26 @@
 import streamlit as st
-import streamlit.components.v1 as components
 
 
 def render():
-    # ── LIVE NEURAL BACKGROUND via iframe ──
-    components.html("""
-    <style>
-        body { margin:0; overflow:hidden; background:#000510; }
-        canvas { display:block; }
-    </style>
-    <canvas id="c"></canvas>
-    <script>
-    const canvas = document.getElementById('c');
-    const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    window.addEventListener('resize', () => {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-    });
-
-    const COUNT = 80, MAX_DIST = 150;
-    const particles = [];
-
-    class Particle {
-        constructor() { this.reset(); }
-        reset() {
-            this.x = Math.random() * canvas.width;
-            this.y = Math.random() * canvas.height;
-            this.vx = (Math.random() - 0.5) * 0.6;
-            this.vy = (Math.random() - 0.5) * 0.6;
-            this.r = Math.random() * 2 + 1;
-            this.color = Math.random() > 0.5 ? '139,92,246' : '59,130,246';
-        }
-        update() {
-            this.x += this.vx; this.y += this.vy;
-            if(this.x < 0 || this.x > canvas.width) this.vx *= -1;
-            if(this.y < 0 || this.y > canvas.height) this.vy *= -1;
-        }
-        draw() {
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.r, 0, Math.PI*2);
-            ctx.fillStyle = `rgba(${this.color},0.9)`;
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = `rgba(${this.color},0.8)`;
-            ctx.fill();
-            ctx.shadowBlur = 0;
-        }
-    }
-
-    for(let i=0;i<COUNT;i++) particles.push(new Particle());
-
-    function animate() {
-        ctx.fillStyle = 'rgba(0,5,16,0.15)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        for(let i=0;i<particles.length;i++) {
-            particles[i].update();
-            particles[i].draw();
-            for(let j=i+1;j<particles.length;j++) {
-                const dx = particles[i].x - particles[j].x;
-                const dy = particles[i].y - particles[j].y;
-                const dist = Math.sqrt(dx*dx + dy*dy);
-                if(dist < MAX_DIST) {
-                    const alpha = (1 - dist/MAX_DIST) * 0.5;
-                    const grad = ctx.createLinearGradient(particles[i].x, particles[i].y, particles[j].x, particles[j].y);
-                    grad.addColorStop(0, `rgba(139,92,246,${alpha})`);
-                    grad.addColorStop(1, `rgba(59,130,246,${alpha})`);
-                    ctx.beginPath();
-                    ctx.moveTo(particles[i].x, particles[i].y);
-                    ctx.lineTo(particles[j].x, particles[j].y);
-                    ctx.strokeStyle = grad;
-                    ctx.lineWidth = 1;
-                    ctx.stroke();
-                }
-            }
-        }
-        requestAnimationFrame(animate);
-    }
-    animate();
-    </script>
-    """, height=400)
-
     st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Exo+2:wght@300;400;600;700&display=swap');
 
     .stApp { background: #000510 !important; }
+
+    /* ── PARTICLE CANVAS as fixed background ── */
+    #neural-bg {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100vw; height: 100vh;
+        z-index: 0;
+        pointer-events: none;
+    }
+
+    /* push all Streamlit content above the canvas */
+    .stApp > * { position: relative; z-index: 1; }
+    [data-testid="stAppViewContainer"] { background: transparent !important; }
+    [data-testid="stHeader"] { background: transparent !important; }
 
     .hero-badge {
         display: inline-flex; align-items: center; gap: 8px;
@@ -114,7 +49,8 @@ def render():
     }
 
     .stats-wrapper {
-        display: grid; grid-template-columns: repeat(4, 1fr);
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
         gap: 12px; margin-bottom: 24px;
     }
 
@@ -192,7 +128,9 @@ def render():
     }
 
     .steps-grid {
-        display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 14px; margin-bottom: 20px;
     }
 
     .step {
@@ -200,6 +138,7 @@ def render():
         background: rgba(4,6,22,0.85); border: 1px solid rgba(139,92,246,0.2);
         border-radius: 14px; transition: all 0.3s;
         box-shadow: 0 0 15px rgba(139,92,246,0.05);
+        backdrop-filter: blur(12px);
     }
 
     .step:hover { border-color:rgba(139,92,246,.4); transform:translateY(-4px); box-shadow:0 0 25px rgba(139,92,246,.15); }
@@ -208,7 +147,9 @@ def render():
     .step-text { font-family:'Exo 2',sans-serif; color:#64748b; font-size:12px; line-height:1.6; }
 
     .feature-grid {
-        display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 14px; margin-bottom: 20px;
     }
 
     .feature-card {
@@ -216,6 +157,7 @@ def render():
         border: 1px solid rgba(139,92,246,0.2); border-radius: 16px;
         position: relative; overflow: hidden; transition: all 0.3s;
         box-shadow: 0 0 15px rgba(139,92,246,0.05);
+        backdrop-filter: blur(12px);
     }
 
     .feature-card::before { content:''; position:absolute; top:0; left:0; right:0; height:1.5px; background:linear-gradient(90deg,transparent,rgba(139,92,246,.5),transparent); }
@@ -229,6 +171,7 @@ def render():
         border: 1px solid rgba(139,92,246,0.3); border-radius: 24px;
         padding: 48px 40px; text-align: center; position: relative; overflow: hidden;
         box-shadow: 0 0 40px rgba(139,92,246,0.1);
+        backdrop-filter: blur(12px);
     }
 
     .cta-wrapper::before { content:''; position:absolute; top:0; left:0; right:0; height:1.5px; background:linear-gradient(90deg,transparent,#8b5cf6,#60a5fa,transparent); box-shadow:0 0 15px rgba(139,92,246,.5); }
@@ -244,6 +187,82 @@ def render():
         .cta-title { font-size: 20px; }
     }
     </style>
+
+    <!-- Particle canvas injected into page DOM as fixed background -->
+    <canvas id="neural-bg"></canvas>
+    <script>
+    (function() {
+        const canvas = document.getElementById('neural-bg');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        const COUNT = 80, MAX_DIST = 150;
+        const particles = [];
+
+        function Particle() {
+            this.reset = function() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.vx = (Math.random() - 0.5) * 0.6;
+                this.vy = (Math.random() - 0.5) * 0.6;
+                this.r = Math.random() * 2 + 1;
+                this.color = Math.random() > 0.5 ? '139,92,246' : '59,130,246';
+            };
+            this.reset();
+            this.update = function() {
+                this.x += this.vx; this.y += this.vy;
+                if (this.x < 0 || this.x > canvas.width)  this.vx *= -1;
+                if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+            };
+            this.draw = function() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(' + this.color + ',0.9)';
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = 'rgba(' + this.color + ',0.8)';
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            };
+        }
+
+        for (var i = 0; i < COUNT; i++) particles.push(new Particle());
+
+        function animate() {
+            ctx.fillStyle = 'rgba(0,5,16,0.15)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            for (var i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw();
+                for (var j = i + 1; j < particles.length; j++) {
+                    var dx = particles[i].x - particles[j].x;
+                    var dy = particles[i].y - particles[j].y;
+                    var dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < MAX_DIST) {
+                        var alpha = (1 - dist / MAX_DIST) * 0.5;
+                        var grad = ctx.createLinearGradient(particles[i].x, particles[i].y, particles[j].x, particles[j].y);
+                        grad.addColorStop(0, 'rgba(139,92,246,' + alpha + ')');
+                        grad.addColorStop(1, 'rgba(59,130,246,' + alpha + ')');
+                        ctx.beginPath();
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.strokeStyle = grad;
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+        animate();
+    })();
+    </script>
     """, unsafe_allow_html=True)
 
     # ── HERO ──
