@@ -51,26 +51,9 @@ def render():
     .c-bl{bottom:10px;left:10px;border-width:0 0 1.5px 1.5px}
     .c-br{bottom:10px;right:10px;border-width:0 1.5px 1.5px 0}
 
-    .card-top {
-        display:flex; align-items:center; gap:16px;
-        margin-bottom:20px; padding-bottom:18px;
-        border-bottom:1px solid rgba(139,92,246,.1);
-    }
-
-    .icon-box {
-        width:52px; height:52px; flex-shrink:0;
-        background:rgba(139,92,246,.1);
-        border:1px solid rgba(139,92,246,.3);
-        border-radius:14px;
-        display:flex; align-items:center; justify-content:center;
-        font-size:24px;
-        box-shadow:0 0 20px rgba(139,92,246,.2);
-    }
-
     .card-title { font-family:'Orbitron',sans-serif; font-size:1.5rem; font-weight:900; background:linear-gradient(90deg,#a78bfa,#60a5fa,#c084fc); -webkit-background-clip:text; -webkit-text-fill-color:transparent; letter-spacing:3px; }
     .card-sub { font-family:'Exo 2',sans-serif; color:rgba(100,116,139,.7); font-size:11px; letter-spacing:1.5px; text-transform:uppercase; margin-top:3px; }
 
-    .progress-bar { display:flex; gap:6px; margin-bottom:20px; }
     .prog-step { flex:1; height:3px; border-radius:2px; background:rgba(139,92,246,.15); border:1px solid rgba(139,92,246,.2); }
     .prog-step.active { background:rgba(139,92,246,.4); border-color:rgba(139,92,246,.6); box-shadow:0 0 8px rgba(139,92,246,.4); }
 
@@ -112,16 +95,14 @@ def render():
             <div class="corner c-tr"></div>
             <div class="corner c-bl"></div>
             <div class="corner c-br"></div>
-
-            <div class="card-top">
-                <div class="icon-box">🚀</div>
+            <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid rgba(139,92,246,.1);">
+                <div style="width:52px;height:52px;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.3);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">🚀</div>
                 <div>
                     <div class="card-title">SIGN UP</div>
                     <div class="card-sub">// Join the future of hiring</div>
                 </div>
             </div>
-
-            <div class="progress-bar">
+            <div style="display:flex;gap:6px;">
                 <div class="prog-step active"></div>
                 <div class="prog-step active"></div>
                 <div class="prog-step active"></div>
