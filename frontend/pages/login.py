@@ -49,7 +49,7 @@ def render():
                 </script>
                 </body>
                 </html>
-            """, height=0)
+            """, height=1)
             time.sleep(3)
 
         role = st.session_state.get("role", "candidate")
