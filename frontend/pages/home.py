@@ -27,11 +27,11 @@ def render():
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        body {
+        html, body {
+            height: auto;
             background: #000510;
             font-family: 'Exo 2', sans-serif;
             overflow-x: hidden;
-            min-height: 100vh;
         }
 
         canvas {
@@ -374,9 +374,9 @@ def render():
             draw() {
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(${this.color},0.9)`;
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = `rgba(${this.color},0.8)`;
+                ctx.fillStyle = `rgba(${this.color},0.35)`;
+                ctx.shadowBlur = 4;
+                ctx.shadowColor = `rgba(${this.color},0.2)`;
                 ctx.fill();
                 ctx.shadowBlur = 0;
             }
@@ -385,7 +385,7 @@ def render():
         for (let i = 0; i < COUNT; i++) particles.push(new Particle());
 
         function animate() {
-            ctx.fillStyle = 'rgba(0,5,16,0.15)';
+            ctx.fillStyle = 'rgba(0,5,16,0.25)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             for (let i = 0; i < particles.length; i++) {
                 particles[i].update();
@@ -395,7 +395,7 @@ def render():
                     const dy = particles[i].y - particles[j].y;
                     const dist = Math.sqrt(dx*dx + dy*dy);
                     if (dist < MAX_DIST) {
-                        const alpha = (1 - dist / MAX_DIST) * 0.5;
+                        const alpha = (1 - dist / MAX_DIST) * 0.15;
                         const grad = ctx.createLinearGradient(particles[i].x, particles[i].y, particles[j].x, particles[j].y);
                         grad.addColorStop(0, `rgba(139,92,246,${alpha})`);
                         grad.addColorStop(1, `rgba(59,130,246,${alpha})`);
@@ -414,7 +414,7 @@ def render():
     </script>
     </body>
     </html>
-    """, height=1100, scrolling=False)
+    """, height=2200, scrolling=False)
 
     # ── HANDLE NAVIGATION FROM IFRAME BUTTONS ──
     if result and isinstance(result, str):
