@@ -20,10 +20,8 @@ def render():
     .hero-wrapper::before {
         content: '';
         position: absolute;
-        top: -50%;
-        right: -10%;
-        width: 500px;
-        height: 500px;
+        top: -50%; right: -10%;
+        width: 500px; height: 500px;
         background: radial-gradient(circle, rgba(139,92,246,0.12) 0%, transparent 70%);
         border-radius: 50%;
         pointer-events: none;
@@ -32,10 +30,8 @@ def render():
     .hero-wrapper::after {
         content: '';
         position: absolute;
-        bottom: -30%;
-        left: 20%;
-        width: 300px;
-        height: 300px;
+        bottom: -30%; left: 20%;
+        width: 300px; height: 300px;
         background: radial-gradient(circle, rgba(59,130,246,0.1) 0%, transparent 70%);
         border-radius: 50%;
         pointer-events: none;
@@ -84,20 +80,18 @@ def render():
 
     /* ── STATS ── */
     .stats-wrapper {
-        display: flex;
-        gap: 16px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+        gap: 12px;
         margin-bottom: 30px;
-        flex-wrap: wrap;
     }
 
     .stat-item {
         background: rgba(139,92,246,0.06);
         border: 1px solid rgba(139,92,246,0.18);
         border-radius: 14px;
-        padding: 16px 24px;
+        padding: 16px 12px;
         text-align: center;
-        flex: 1;
-        min-width: 120px;
         box-shadow: 0 0 20px rgba(139,92,246,0.06);
     }
 
@@ -121,12 +115,18 @@ def render():
     }
 
     /* ── FEATURE CARDS ── */
+    .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
     .feature-card {
         background: rgba(139,92,246,0.04);
         border: 1px solid rgba(139,92,246,0.15);
         border-radius: 20px;
         padding: 28px 22px;
-        min-height: 200px;
         transition: all 0.3s ease;
         position: relative;
         overflow: hidden;
@@ -135,9 +135,7 @@ def render():
     .feature-card::before {
         content: '';
         position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
+        top: 0; left: 0; right: 0;
         height: 1px;
         background: linear-gradient(90deg, transparent, rgba(139,92,246,0.5), transparent);
     }
@@ -168,47 +166,6 @@ def render():
         font-size: 14px;
         color: #64748b;
         line-height: 1.7;
-    }
-
-    /* ── HOW IT WORKS ── */
-    .steps-wrapper {
-        display: flex;
-        gap: 0;
-        margin: 20px 0;
-        position: relative;
-    }
-
-    .step-item {
-        flex: 1;
-        text-align: center;
-        padding: 24px 16px;
-        position: relative;
-    }
-
-    .step-number {
-        font-family: 'Orbitron', sans-serif;
-        font-size: 36px;
-        font-weight: 900;
-        background: linear-gradient(135deg, #8b5cf6, #3b82f6);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        filter: drop-shadow(0 0 15px rgba(139,92,246,0.6));
-        margin-bottom: 12px;
-    }
-
-    .step-title {
-        font-family: 'Exo 2', sans-serif;
-        font-size: 16px;
-        font-weight: 700;
-        color: #e2e8f0;
-        margin-bottom: 8px;
-    }
-
-    .step-text {
-        font-family: 'Exo 2', sans-serif;
-        font-size: 13px;
-        color: #64748b;
-        line-height: 1.6;
     }
 
     /* ── SECTION TITLES ── */
@@ -276,7 +233,6 @@ def render():
         border: 1px solid rgba(139,92,246,0.15);
         border-radius: 20px;
         padding: 28px;
-        height: 100%;
         position: relative;
         overflow: hidden;
     }
@@ -284,9 +240,7 @@ def render():
     .side-panel::before {
         content: '';
         position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
+        top: 0; left: 0; right: 0;
         height: 1px;
         background: linear-gradient(90deg, transparent, rgba(139,92,246,0.6), transparent);
     }
@@ -320,8 +274,7 @@ def render():
     }
 
     .panel-dot {
-        width: 8px;
-        height: 8px;
+        width: 8px; height: 8px;
         border-radius: 50%;
         background: #8b5cf6;
         box-shadow: 0 0 8px rgba(139,92,246,0.8);
@@ -341,10 +294,22 @@ def render():
         color: #e2e8f0;
         margin-bottom: 2px;
     }
+
+    /* ── MOBILE OVERRIDES ── */
+    @media (max-width: 640px) {
+        .hero-wrapper { padding: 36px 24px; }
+        .hero-title { font-size: 32px; }
+        .hero-text { font-size: 15px; }
+        .stat-number { font-size: 22px; }
+        .cta-wrapper { padding: 32px 20px; }
+        .cta-title { font-size: 22px; }
+        .section-heading { font-size: 20px; }
+    }
     </style>
     """, unsafe_allow_html=True)
 
-    # ── HERO ──
+    # ── HERO + SIDE PANEL ──
+    # On desktop: 2 columns. On mobile: Streamlit stacks them automatically.
     left, right = st.columns([1.5, 1])
 
     with left:
@@ -364,7 +329,7 @@ def render():
         </div>
         """, unsafe_allow_html=True)
 
-        # Stats
+        # Stats — CSS grid, collapses to 2×2 on mobile
         st.markdown("""
         <div class="stats-wrapper">
             <div class="stat-item">
@@ -388,11 +353,11 @@ def render():
 
         b1, b2 = st.columns(2)
         with b1:
-            if st.button("🚀 Get Started — It's Free"):
+            if st.button("🚀 Get Started — It's Free", use_container_width=True):
                 st.session_state.page = "Sign Up"
                 st.rerun()
         with b2:
-            if st.button("🔐 Login to Dashboard"):
+            if st.button("🔐 Login to Dashboard", use_container_width=True):
                 st.session_state.page = "Login"
                 st.rerun()
 
@@ -422,25 +387,29 @@ def render():
             </div>
         </div>
         """, unsafe_allow_html=True)
-    st.markdown("<br>", unsafe_allow_html=True)
 
-    f4, f5, f6 = st.columns(3)
+    st.markdown('<div class="neon-divider"></div>', unsafe_allow_html=True)
 
-    features2 = [
-        ("⚡", "Real-Time Rankings", "Candidate leaderboards update instantly as new applications come in — always see the top talent first."),
-        ("📧", "Smart Communication", "Send personalized shortlist or rejection emails directly from the platform with one click."),
-        ("📊", "Hiring Analytics", "Get full visibility into your pipeline — scores, statuses, skill gaps, and hiring trends at a glance."),
-    ]
-
-    for col, (icon, title, text) in zip([f4, f5, f6], features2):
-        with col:
-            st.markdown(f"""
-            <div class="feature-card">
-                <div class="feature-icon">{icon}</div>
-                <div class="feature-title">{title}</div>
-                <div class="feature-text">{text}</div>
-            </div>
-            """, unsafe_allow_html=True)
+    # ── FEATURE CARDS — CSS grid, no st.columns ──
+    st.markdown("""
+    <div class="feature-grid">
+        <div class="feature-card">
+            <div class="feature-icon">⚡</div>
+            <div class="feature-title">Real-Time Rankings</div>
+            <div class="feature-text">Candidate leaderboards update instantly as new applications come in — always see the top talent first.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📧</div>
+            <div class="feature-title">Smart Communication</div>
+            <div class="feature-text">Send personalized shortlist or rejection emails directly from the platform with one click.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📊</div>
+            <div class="feature-title">Hiring Analytics</div>
+            <div class="feature-text">Get full visibility into your pipeline — scores, statuses, skill gaps, and hiring trends at a glance.</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
     st.markdown('<div class="neon-divider"></div>', unsafe_allow_html=True)
 
@@ -454,16 +423,16 @@ def render():
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    c1, c2, c3 = st.columns([1, 1, 1])
+    c1, c2, c3 = st.columns(3)
     with c1:
-        if st.button("🚀 Create Free Account"):
+        if st.button("🚀 Create Free Account", use_container_width=True):
             st.session_state.page = "Sign Up"
             st.rerun()
     with c2:
-        if st.button("🔐 Sign In"):
+        if st.button("🔐 Sign In", use_container_width=True):
             st.session_state.page = "Login"
             st.rerun()
     with c3:
-        if st.button("💼 Browse Jobs"):
+        if st.button("💼 Browse Jobs", use_container_width=True):
             st.session_state.page = "Jobs"
             st.rerun()
