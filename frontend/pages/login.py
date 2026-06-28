@@ -7,11 +7,53 @@ import streamlit.components.v1 as components
 
 def render():
     if st.session_state.get("token"):
+        if st.session_state.get("just_logged_in"):
+            st.session_state.pop("just_logged_in")
+            st.balloons()
+            components.html("""
+                <html>
+                <head>
+                    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+                </head>
+                <body>
+                <script>
+                const end = Date.now() + 3000;
+                (function frame() {
+                    confetti({
+                        particleCount: 8,
+                        angle: 60,
+                        spread: 70,
+                        origin: { x: 0 },
+                        colors: ['#8b5cf6','#60a5fa','#c084fc','#ffffff']
+                    });
+                    confetti({
+                        particleCount: 8,
+                        angle: 120,
+                        spread: 70,
+                        origin: { x: 1 },
+                        colors: ['#8b5cf6','#60a5fa','#c084fc','#ffffff']
+                    });
+                    confetti({
+                        particleCount: 5,
+                        spread: 360,
+                        startVelocity: 35,
+                        ticks: 80,
+                        origin: {
+                            x: Math.random(),
+                            y: Math.random() * 0.5
+                        },
+                        colors: ['#8b5cf6','#60a5fa','#c084fc','#ffffff']
+                    });
+                    if (Date.now() < end) requestAnimationFrame(frame);
+                })();
+                </script>
+                </body>
+                </html>
+            """, height=0)
+            time.sleep(3)
+
         role = st.session_state.get("role", "candidate")
-        if role == "admin":
-            st.session_state["page"] = "Admin Panel"
-        else:
-            st.session_state["page"] = "Dashboard"
+        st.session_state["page"] = "Admin Panel" if role == "admin" else "Dashboard"
         st.rerun()
 
     st.markdown("""
@@ -186,75 +228,9 @@ def render():
                             st.session_state["token"] = data.get("access_token")
                             st.session_state["role"] = data.get("role", "candidate")
                             st.session_state["user_email"] = email
+                            st.session_state["just_logged_in"] = True
 
-                            role = data.get("role", "candidate")
-                            st.session_state["page"] = "Admin Panel" if role == "admin" else "Dashboard"
-
-                            # Success message
-                            st.success("✅ Access granted! Welcome back.")
-
-                            # Balloons
-                            st.balloons()
-
-                            # Fireworks / Confetti
-                            components.html(
-                                """
-                                <html>
-                                <head>
-                                    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
-                                </head>
-                                <body>
-                                <script>
-
-                                const end = Date.now() + 3000;
-
-                                (function frame() {
-
-                                    confetti({
-                                        particleCount: 8,
-                                        angle: 60,
-                                        spread: 70,
-                                        origin: { x: 0 },
-                                        colors: ['#8b5cf6','#60a5fa','#c084fc','#ffffff']
-                                    });
-
-                                    confetti({
-                                        particleCount: 8,
-                                        angle: 120,
-                                        spread: 70,
-                                        origin: { x: 1 },
-                                        colors: ['#8b5cf6','#60a5fa','#c084fc','#ffffff']
-                                    });
-
-                                    confetti({
-                                        particleCount: 5,
-                                        spread: 360,
-                                        startVelocity: 35,
-                                        ticks: 80,
-                                        origin: {
-                                            x: Math.random(),
-                                            y: Math.random() * 0.5
-                                        },
-                                        colors: ['#8b5cf6','#60a5fa','#c084fc','#ffffff']
-                                    });
-
-                                    if (Date.now() < end) {
-                                        requestAnimationFrame(frame);
-                                    }
-
-                                })();
-
-                                </script>
-                                </body>
-                                </html>
-                                """,
-                                height=0,
-                            )
-
-                            # Small delay so the user sees the celebration
-                            time.sleep(3)
-
-                            # Go to dashboard
+                            # Rerun — celebration plays at top of render()
                             st.rerun()
 
                         else:
