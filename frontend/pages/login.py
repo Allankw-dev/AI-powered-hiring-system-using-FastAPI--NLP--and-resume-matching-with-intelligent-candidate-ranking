@@ -9,7 +9,6 @@ def render():
         if st.session_state.get("just_logged_in"):
             st.session_state.pop("just_logged_in")
             st.balloons()
-            time.sleep(3)
 
         role = st.session_state.get("role", "candidate")
         st.session_state["page"] = "Admin Panel" if role == "admin" else "Dashboard"
@@ -24,6 +23,62 @@ def render():
         background-image:
             radial-gradient(ellipse at 20% 50%, rgba(120,40,200,0.15) 0%, transparent 50%),
             radial-gradient(ellipse at 80% 20%, rgba(40,80,200,0.12) 0%, transparent 45%) !important;
+    }
+
+    /* ── Fix dimmed inputs ── */
+    .stTextInput input {
+        background-color: rgba(15, 20, 50, 0.9) !important;
+        color: #e2e8f0 !important;
+        border: 1px solid rgba(139,92,246,0.4) !important;
+        border-radius: 8px !important;
+        caret-color: #a78bfa !important;
+    }
+
+    .stTextInput input:focus {
+        border-color: rgba(139,92,246,0.8) !important;
+        box-shadow: 0 0 0 2px rgba(139,92,246,0.2) !important;
+    }
+
+    .stTextInput label {
+        color: #94a3b8 !important;
+        font-family: 'Exo 2', sans-serif !important;
+        font-size: 13px !important;
+    }
+
+    .stTextInput input::placeholder {
+        color: rgba(148,163,184,0.4) !important;
+    }
+
+    /* ── Fix form submit button ── */
+    .stFormSubmitButton button {
+        background: linear-gradient(135deg, #7c3aed, #6d28d9) !important;
+        color: white !important;
+        border: none !important;
+        font-family: 'Orbitron', sans-serif !important;
+        letter-spacing: 2px !important;
+        font-weight: 700 !important;
+        border-radius: 10px !important;
+        transition: all 0.2s !important;
+    }
+
+    .stFormSubmitButton button:hover {
+        box-shadow: 0 0 20px rgba(139,92,246,0.5) !important;
+        transform: translateY(-1px) !important;
+    }
+
+    /* ── Fix nav buttons ── */
+    .stButton button {
+        background: rgba(139,92,246,0.08) !important;
+        color: #a78bfa !important;
+        border: 1px solid rgba(139,92,246,0.25) !important;
+        border-radius: 8px !important;
+        font-family: 'Exo 2', sans-serif !important;
+        font-size: 12px !important;
+    }
+
+    .stButton button:hover {
+        background: rgba(139,92,246,0.18) !important;
+        border-color: rgba(139,92,246,0.5) !important;
     }
 
     .login-card {
@@ -177,33 +232,44 @@ def render():
             if not email or not password:
                 st.warning("Please enter both email and password.")
             else:
+                # Normalize email — fixes case mismatch issues
+                email = email.strip().lower()
+
                 try:
                     with st.spinner("Authenticating..."):
                         response = login(email, password)
+
                         if response.status_code == 200:
                             data = response.json()
 
-                            # Save session
                             st.session_state["token"] = data.get("access_token")
                             st.session_state["role"] = data.get("role", "candidate")
                             st.session_state["user_email"] = email
                             st.session_state["just_logged_in"] = True
 
-                            # Rerun — celebration plays at top of render()
                             st.rerun()
 
                         else:
+                            # Show exact error from backend
                             try:
-                                st.error(response.json().get("detail", "Login failed."))
+                                detail = response.json().get("detail", "Login failed.")
                             except Exception:
-                                st.error("Login failed.")
+                                detail = f"Login failed. (HTTP {response.status_code})"
+                            st.error(f"❌ {detail}")
+
+                            # Temporary debug — remove once login works
+                            with st.expander("🔍 Debug info"):
+                                try:
+                                    st.json(response.json())
+                                except Exception:
+                                    st.code(response.text)
 
                 except requests.exceptions.Timeout:
-                    st.warning("⏳ Server waking up — try again in 30 seconds.")
+                    st.warning("⏳ Server is waking up — please wait 30 seconds and try again.")
                 except requests.exceptions.ConnectionError:
                     st.error("❌ Could not connect to backend.")
                 except Exception as e:
-                    st.error(f"Error: {str(e)}")
+                    st.error(f"Unexpected error: {str(e)}")
 
         st.markdown('<div class="neon-divider"></div>', unsafe_allow_html=True)
 
