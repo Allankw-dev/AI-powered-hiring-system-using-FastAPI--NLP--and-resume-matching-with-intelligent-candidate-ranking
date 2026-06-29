@@ -19,3 +19,6 @@ app.include_router(password_reset.router)
 @app.get("/")
 def home():
     return {"message": "AI Hiring Platform API is running"}
+@app.get("/health")
+def health():
+    return {"status": "ok"}
