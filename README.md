@@ -10,7 +10,7 @@
 
 ---
 
-## ✨ Features...
+## ✨ Features..
 
 ### 🧠 AI-Powered Resume Analysis
 - **Semantic Scoring** — TF-IDF cosine similarity between resumes and job descriptions
