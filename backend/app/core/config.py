@@ -60,9 +60,15 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _validate(self):
-        # Heroku/Render style URLs: SQLAlchemy 2 wants "postgresql://"
-        if self.DATABASE_URL.startswith("postgres://"):
-            self.DATABASE_URL = "postgresql://" + self.DATABASE_URL[len("postgres://"):]
+        # Always name the driver explicitly. A bare "postgresql://" means psycopg2
+        # on SQLAlchemy <= 2.0 but psycopg (v3) on 2.1+, and we ship psycopg2.
+        # URLs that already name a driver (postgresql+xxx://) are left alone.
+        url = self.DATABASE_URL
+        if url.startswith("postgres://"):
+            url = "postgresql://" + url[len("postgres://"):]
+        if url.startswith("postgresql://"):
+            url = "postgresql+psycopg2://" + url[len("postgresql://"):]
+        self.DATABASE_URL = url
 
         dev_like = self.ENVIRONMENT.lower() in {"development", "dev", "test"}
 

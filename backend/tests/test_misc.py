@@ -76,7 +76,26 @@ def test_settings_refuse_weak_secret_in_production(monkeypatch):
     with pytest.raises(ValidationError):
         Settings(ENVIRONMENT="production", SECRET_KEY="", DATABASE_URL="sqlite://")
     s = Settings(ENVIRONMENT="production", SECRET_KEY="x" * 40, DATABASE_URL="postgres://u:p@h/db")
-    assert s.DATABASE_URL.startswith("postgresql://")
+    assert s.DATABASE_URL == "postgresql+psycopg2://u:p@h/db"
+
+
+@pytest.mark.parametrize("given,expected", [
+    ("postgres://u:p@h/db", "postgresql+psycopg2://u:p@h/db"),
+    ("postgresql://u:p@h/db?sslmode=require", "postgresql+psycopg2://u:p@h/db?sslmode=require"),
+    ("postgresql+psycopg2://u:p@h/db", "postgresql+psycopg2://u:p@h/db"),
+    ("postgresql+psycopg://u:p@h/db", "postgresql+psycopg://u:p@h/db"),  # explicit choice respected
+    ("sqlite:///x.db", "sqlite:///x.db"),
+])
+def test_database_url_driver_is_explicit(given, expected):
+    from app.core.config import Settings
+    assert Settings(ENVIRONMENT="test", SECRET_KEY="x" * 40, DATABASE_URL=given).DATABASE_URL == expected
+
+
+def test_normalised_postgres_url_builds_a_psycopg2_engine():
+    from sqlalchemy import create_engine
+    from app.core.config import Settings
+    url = Settings(ENVIRONMENT="test", SECRET_KEY="x" * 40, DATABASE_URL="postgresql://u:p@h:5432/db").DATABASE_URL
+    assert create_engine(url).dialect.driver == "psycopg2"  # no connection is made
 
 
 def test_password_hashing_matches_legacy_truncation():
