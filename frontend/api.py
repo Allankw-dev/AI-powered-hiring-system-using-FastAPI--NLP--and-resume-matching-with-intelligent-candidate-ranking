@@ -6,6 +6,24 @@ REQUEST_TIMEOUT = 60
 
 
 # ------------------------------
+# ERROR MESSAGES
+# ------------------------------
+def error_message(response, default="Something went wrong."):
+    """Readable error text from a backend response (handles FastAPI 422 lists too)."""
+    try:
+        detail = response.json().get("detail", default)
+    except Exception:
+        return default
+    if isinstance(detail, list):
+        parts = []
+        for item in detail:
+            msg = item.get("msg", "") if isinstance(item, dict) else str(item)
+            parts.append(msg.replace("Value error, ", ""))
+        return "; ".join(p for p in parts if p) or default
+    return str(detail)
+
+
+# ------------------------------
 # AUTH HEADERS
 # ------------------------------
 def get_headers():
@@ -25,14 +43,13 @@ def get_headers_without_content_type():
 # ------------------------------
 # AUTH ROUTES
 # ------------------------------
-def sign_up(full_name, email, password, sex):
+def sign_up(full_name, email, password):
     return requests.post(
         f"{API_BASE_URL}/auth/signup",
         json={
             "full_name": full_name,
             "email": email,
-            "password": password,
-            "sex": sex
+            "password": password
         },
         timeout=REQUEST_TIMEOUT
     )
@@ -148,6 +165,14 @@ def my_resumes():
     )
 
 
+def delete_resume(resume_id):
+    return requests.delete(
+        f"{API_BASE_URL}/resumes/{resume_id}",
+        headers=get_headers(),
+        timeout=REQUEST_TIMEOUT
+    )
+
+
 # ------------------------------
 # APPLICATION ROUTES
 # ------------------------------
@@ -174,9 +199,22 @@ def my_applications():
 # ------------------------------
 # ADMIN ROUTES
 # ------------------------------
-def top_candidates():
+def top_candidates(job_id=None, limit=20):
+    params = {"limit": limit}
+    if job_id is not None:
+        params["job_id"] = job_id
     return requests.get(
         f"{API_BASE_URL}/admin/top-candidates",
+        headers=get_headers(),
+        params=params,
+        timeout=REQUEST_TIMEOUT
+    )
+
+
+def rescore_job(job_id):
+    """Re-run matching for every application to a job (after editing the job)."""
+    return requests.post(
+        f"{API_BASE_URL}/admin/jobs/{job_id}/rescore",
         headers=get_headers(),
         timeout=REQUEST_TIMEOUT
     )

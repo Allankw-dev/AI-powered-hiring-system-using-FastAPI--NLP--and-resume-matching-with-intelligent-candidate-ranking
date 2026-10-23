@@ -1,10 +1,10 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 
 class CandidateEmailRequest(BaseModel):
     application_id: int
-    subject: str
-    message_body: str
+    subject: str = Field(min_length=1, max_length=200)
+    message_body: str = Field(min_length=1, max_length=5000)
 
 
 class CandidateRankingOut(BaseModel):

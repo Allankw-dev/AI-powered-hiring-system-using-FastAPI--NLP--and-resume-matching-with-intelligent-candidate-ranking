@@ -205,9 +205,15 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# ── Project specific ──
 .env
 .env.*
-backend/.env
+!.env.example
 backend/uploads/
-*.pdf
-.env
+uploads/
+.streamlit/secrets.toml
+*.db
+*.sqlite3
+.pytest_cache/
+node_modules/

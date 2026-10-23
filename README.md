@@ -1,7 +1,6 @@
+# 🤖 AI-Powered Hiring System
 
-# 🤖 AI-Powered Hiring System.
-
-> An intelligent recruitment platform built with FastAPI, Streamlit, and PostgreSQL — powered by NLP and machine learning to automate resume screening, candidate scoring, and hiring decisions..
+> An intelligent recruitment platform built with FastAPI, Streamlit and PostgreSQL. It uses NLP and machine learning to screen resumes, score candidates and rank them for recruiters.
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Streamlit-FF4B4B?style=for-the-badge&logo=streamlit)](https://ai-powered-hiring-system.streamlit.app)
 [![Backend](https://img.shields.io/badge/Backend-Render-46E3B7?style=for-the-badge&logo=render)](https://ai-powered-hiring-system-using-fastapi-c1ya.onrender.com)
@@ -10,311 +9,165 @@
 
 ---
 
-## ✨ Features..
+## ✨ Features
 
 ### 🧠 AI-Powered Resume Analysis
-- **Semantic Scoring** — TF-IDF cosine similarity between resumes and job descriptions
-- **Skill Extraction** — 50+ skill taxonomy for accurate matching
-- **Experience Estimation** — Regex-based extraction of years of experience
-- **Fraud Detection** — Flags keyword stuffing, inconsistent dates, and suspicious patterns
+- **Text similarity** — TF-IDF (unigrams + bigrams) cosine similarity between resume and job, rescaled to 0–100
+- **Skill extraction** — ~100 skills with aliases and word-boundary matching (`java` ≠ `javascript`, `sql` ≠ `mysql`)
+- **Job-driven matching** — uses the job's own *required skills* and *minimum experience* fields
+- **Experience estimation** — explicit claims ("5+ years of experience") or merged date ranges; education dates are ignored
+- **Fraud checks** — keyword stuffing, inconsistent dates, very short resumes, missing contact info, the same CV used on two accounts
 
-### 📊 Intelligent Candidate Scoring
+### 📊 Candidate scoring
 | Component | Weight | Description |
 |-----------|--------|-------------|
-| Semantic Score | 45% | Resume-to-job similarity |
-| Skills Score | 25% | Required skills matched |
-| Experience Score | 20% | Years of experience vs requirement |
-| Verification Score | 10% | Resume authenticity |
+| Text similarity | 45% | Resume-to-job similarity |
+| Skills | 25% | Required skills found in the resume |
+| Experience | 20% | Years of experience vs requirement |
+| Verification | 10% | Resume authenticity checks |
 
-### 👥 Dual Role System
-- **Candidates** — Sign up, upload resumes, apply for jobs, track application status
-- **Admins** — Post jobs, view AI-ranked candidates, shortlist/reject, send emails
+Applications are ranked per job (`ranking_position`). Admins can re-score a job's applications after editing it.
 
-### 🤖 Hira AI Assistant
-- Floating chat bubble powered by **Claude AI**
-- Helps candidates with resume tips and job matching advice
-- Helps admins analyze candidates and make decisions
-- Answers any question about the platform
+### 👥 Roles
+- **Candidates** — sign up, upload resumes (PDF/TXT), apply, see their own matched/missing skills
+- **Admins** — post jobs, review AI-ranked candidates (all jobs or one job), shortlist/reject, email candidates. Admins sign in with **password + emailed one-time code**.
+
+### 🤖 Hira assistant
+Floating chat bubble powered by **Claude** (set `ANTHROPIC_API_KEY`) or **Gemini** as a fallback (`GEMINI_API_KEY`). It has no access to anyone's account or data, is rate limited, and has a daily cap.
 
 ### 🔐 Security
-- JWT authentication with bcrypt password hashing
-- Rate limiting on all auth endpoints (slowapi)
-- CORS protection restricted to frontend origin
-- Input sanitization with bleach
-- All secrets stored in environment variables
-- Password strength validation
+- JWT auth + bcrypt; password strength enforced on signup **and** reset
+- Admin 2FA is mandatory — a password alone never yields an admin token; OTPs expire in 5 minutes and die after 5 wrong guesses
+- Self-service signup can only create candidates; admins are managed with `scripts/manage_admin.py`
+- Password-reset tokens are stored hashed, single-use, 1 hour
+- Rate limiting that sees the real client IP behind Render's proxy
+- Upload checks: size limit, extension allow-list, real file signature, sanitized names
+- Output escaping in emails and the chat widget; no internal error details sent to clients
+- App refuses to start in production without a strong `SECRET_KEY`
 
 ---
 
-## 🛠️ Tech Stack
-
-### Backend
-| Technology | Purpose |
-|-----------|---------|
-| **FastAPI** | REST API framework |
-| **SQLAlchemy** | ORM for database operations |
-| **PostgreSQL** | Production database (Supabase) |
-| **pdfplumber** | PDF text extraction |
-| **scikit-learn** | TF-IDF vectorization & cosine similarity |
-| **passlib + bcrypt** | Password hashing |
-| **python-jose** | JWT token generation |
-| **slowapi** | Rate limiting |
-| **bleach** | Input sanitization |
-| **httpx** | Async HTTP for Claude API |
-
-### Frontend
-| Technology | Purpose |
-|-----------|---------|
-| **Streamlit** | Web application framework |
-| **HTML/CSS/JS** | Custom UI components |
-| **requests** | HTTP client for API calls |
-
-### Infrastructure
-| Service | Purpose |
-|---------|---------|
-| **Render** | Backend hosting |
-| **Streamlit Cloud** | Frontend hosting |
-| **Supabase** | PostgreSQL database |
-| **UptimeRobot** | Backend uptime monitoring |
-| **Gmail SMTP** | Email notifications |
+## 🛠️ Tech stack
+**Backend:** FastAPI · SQLAlchemy · PostgreSQL (Supabase) · pdfplumber · scikit-learn · passlib/bcrypt · python-jose · slowapi · bleach · httpx
+**Frontend:** Streamlit · requests
+**Infra:** Render (API) · Streamlit Cloud (UI) · Supabase (DB) · Resend or Gmail SMTP (email)
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Getting started
 
-### Prerequisites
-- Python 3.12+
-- PostgreSQL database (Supabase recommended)
-- Gmail account with App Password enabled
-
-### 1. Clone the repository
 ```bash
 git clone https://github.com/Allankw-dev/AI-powered-hiring-system-using-FastAPI--NLP--and-resume-matching-with-intelligent-candidate-ranking.git
-cd ai-hiring-system
+cd AI-powered-hiring-system-using-FastAPI--NLP--and-resume-matching-with-intelligent-candidate-ranking
 ```
 
-### 2. Backend Setup
+### 1. Backend
 ```bash
 cd backend
 python -m venv venv
-venv\Scripts\activate  # Windows
+venv\Scripts\activate            # Windows   (macOS/Linux: source venv/bin/activate)
 pip install -r requirements.txt
-```
-
-Create a `.env` file in the backend directory:
-```env
-SECRET_KEY=your-secret-key-here
-DATABASE_URL=postgresql://user:password@host:5432/dbname
-ADMIN_EMAIL=your-email@gmail.com
-ADMIN_EMAIL_PASSWORD=your-gmail-app-password
-ADMIN_EMAILS=your-email@gmail.com
-ANTHROPIC_API_KEY=your-anthropic-api-key
-FRONTEND_URL=http://localhost:8501
-```
-
-Run the backend:
-```bash
+copy .env.example .env           # macOS/Linux: cp .env.example .env   — then fill it in
+python -m scripts.init_db        # creates any missing tables (never drops anything)
+python -m scripts.manage_admin create you@example.com --name "Your Name"
 uvicorn app.main:app --reload
 ```
+For local development set `ENVIRONMENT=development` in `.env`; with `OTP_DELIVERY=log` the admin code is printed in the terminal instead of emailed.
 
-### 3. Frontend Setup
+### 2. Frontend
 ```bash
 cd frontend
 pip install streamlit requests
 ```
-
-Create `.streamlit/secrets.toml`:
+`.streamlit/secrets.toml`:
 ```toml
 API_URL = "http://localhost:8000"
 ```
-
-Run the frontend:
 ```bash
 streamlit run app.py
 ```
+Admins sign in at the **Admin 2FA login** page (`pages/admin_2FA_login.py`).
 
----
-
-## 📁 Project Structure
-
-```
-ai-hiring-system/
-├── backend/
-│   ├── app/
-│   │   ├── core/
-│   │   │   ├── config.py        # Settings & environment variables
-│   │   │   ├── database.py      # SQLAlchemy engine & session
-│   │   │   ├── dep.py           # FastAPI dependencies
-│   │   │   └── security.py      # JWT & bcrypt utilities
-│   │   ├── models/
-│   │   │   ├── user.py          # User table
-│   │   │   ├── job.py           # Job table
-│   │   │   ├── resume.py        # Resume table
-│   │   │   ├── application.py   # Application table
-│   │   │   └── email_log.py     # Email log table
-│   │   ├── routers/
-│   │   │   ├── auth.py          # Signup, login, OTP
-│   │   │   ├── jobs.py          # Job CRUD
-│   │   │   ├── resumes.py       # Resume upload & parsing
-│   │   │   ├── applications.py  # Job applications & AI scoring
-│   │   │   ├── admin.py         # Admin operations
-│   │   │   ├── users.py         # Profile management
-│   │   │   └── password_reset.py # Password reset flow
-│   │   ├── schemas/             # Pydantic validation models
-│   │   ├── services/
-│   │   │   ├── ai_engine.py     # TF-IDF scoring & skill matching
-│   │   │   ├── resume_parser.py # PDF text extraction
-│   │   │   ├── verifier.py      # Fraud detection
-│   │   │   ├── email_service.py # Gmail SMTP
-│   │   │   └── otp_service.py   # OTP generation & verification
-│   │   └── main.py              # FastAPI app entry point
-│   └── requirements.txt
-└── frontend/
-    ├── pages/
-    │   ├── home.py              # Landing page with neural network bg
-    │   ├── login.py             # Login page
-    │   ├── sign_up.py           # Registration page
-    │   ├── dashboard.py         # Candidate dashboard
-    │   ├── jobs.py              # Job listings
-    │   ├── applications.py      # Application tracking
-    │   ├── upload_resume.py     # Resume upload
-    │   ├── profile.py           # User profile
-    │   ├── admin_panel.py       # Admin control panel
-    │   ├── forgot_password.py   # Password recovery
-    │   └── reset_password.py    # Password reset
-    ├── api.py                   # All backend API calls
-    └── app.py                   # Main Streamlit app + AI assistant
+### 3. Tests
+```bash
+cd backend && pip install -r requirements-dev.txt && python -m pytest
 ```
 
 ---
 
-## 🔌 API Endpoints
+## ⚙️ Environment variables
 
-### Authentication
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/auth/signup` | Register new user |
-| POST | `/auth/login` | Login & get JWT token |
-| POST | `/auth/admin/request-otp` | Request admin OTP |
-| POST | `/auth/admin/verify-otp` | Verify admin OTP |
-
-### Jobs
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/jobs/` | List all jobs |
-| POST | `/jobs/` | Create job (admin only) |
-| PUT | `/jobs/{id}` | Update job (admin only) |
-| DELETE | `/jobs/{id}` | Delete job (admin only) |
-
-### Resumes & Applications
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/resumes/upload` | Upload resume PDF |
-| GET | `/resumes/my` | Get my resumes |
-| POST | `/applications/` | Apply to job (triggers AI scoring) |
-| GET | `/applications/my` | Get my applications |
-
-### Admin
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/admin/top-candidates` | Top 20 AI-ranked candidates |
-| POST | `/admin/applications/{id}/shortlist` | Shortlist candidate |
-| POST | `/admin/applications/{id}/reject` | Reject candidate |
-| POST | `/admin/send-email` | Send email to candidate |
-
-### AI & Utilities
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/chat` | Hira AI assistant (Claude) |
-| GET | `/health` | Health check |
+| Variable | Required | Purpose |
+|----------|----------|---------|
+| `DATABASE_URL` | ✅ | PostgreSQL URL |
+| `SECRET_KEY` | ✅ | JWT signing key (`python -c "import secrets; print(secrets.token_urlsafe(48))"`) |
+| `RESEND_API_KEY` + `EMAIL_FROM` | one of | Email over HTTPS (recommended on Render) |
+| `ADMIN_EMAIL` + `ADMIN_EMAIL_PASSWORD` | the two | Gmail SMTP fallback |
+| `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` | optional | Chat assistant (Claude first) |
+| `FRONTEND_URL` | optional | Used in password-reset links |
+| `CORS_ORIGINS` | optional | `*` (default) or a comma-separated list |
+| `OTP_DELIVERY` | optional | `email` (default) or `log` |
+| `TRUSTED_PROXY_HOPS` | optional | Proxies in front of the API (default 1) |
+| `MAX_UPLOAD_MB`, `CHAT_DAILY_LIMIT`, `ENVIRONMENT` | optional | See `.env.example` |
 
 ---
 
-## 🤖 How the AI Scoring Works
+## 🔌 API
 
-```
-Resume PDF Upload
-      ↓
-Text Extraction (pdfplumber)
-      ↓
-┌─────────────────────────────────────┐
-│           AI Scoring Engine         │
-│                                     │
-│  Semantic Score (45%)               │
-│  → TF-IDF vectorization             │
-│  → Cosine similarity with job desc  │
-│                                     │
-│  Skills Score (25%)                 │
-│  → Extract skills from resume       │
-│  → Match against required skills    │
-│                                     │
-│  Experience Score (20%)             │
-│  → Extract years from resume        │
-│  → Compare to job requirement       │
-│                                     │
-│  Verification Score (10%)           │
-│  → Check resume authenticity        │
-│  → Flag suspicious patterns         │
-└─────────────────────────────────────┘
-      ↓
-Overall Score (0-100)
-      ↓
-Ranking Label: Excellent / Good / Fair / Weak
-```
+| Area | Endpoints |
+|------|-----------|
+| Auth | `POST /auth/signup` · `POST /auth/login` (candidates) · `POST /auth/admin/request-otp` · `POST /auth/admin/verify-otp` |
+| Password | `POST /password/forgot` · `POST /password/reset` |
+| Jobs | `GET /jobs/` · `GET /jobs/{id}` · `POST /jobs/` · `PUT /jobs/{id}` · `DELETE /jobs/{id}` (admin; 409 if it has applications) |
+| Resumes | `POST /resumes/upload` · `GET /resumes/my` · `DELETE /resumes/{id}` |
+| Applications | `POST /applications/` · `GET /applications/my` |
+| Admin | `GET /admin/top-candidates?job_id=&limit=` · `POST /admin/applications/{id}/shortlist` · `…/reject` · `POST /admin/send-email` · `POST /admin/jobs/{id}/rescore` · `GET /admin/client-ip` |
+| Users | `GET/PUT /users/me` · `POST /users/me/upload-picture` |
+| Utilities | `POST /chat` · `GET /health` |
+
+Interactive docs: `/docs`.
 
 ---
 
-## 🔒 Security Features
+## 📁 Project structure
 
-- 🔑 **JWT Authentication** — Signed with strong secret key
-- 🔐 **Bcrypt Hashing** — Passwords never stored in plain text
-- 🚦 **Rate Limiting** — 5 login attempts/minute, 3 signups/minute
-- 🛡️ **CORS Protection** — Restricted to frontend domain only
-- 🧹 **Input Sanitization** — bleach strips malicious HTML
-- ✅ **Password Validation** — Minimum 8 chars, uppercase, number required
-- 🔒 **Admin Protection** — Admin password reset blocked
-- 🏊 **Connection Pooling** — Efficient database connections
+```
+backend/
+├── app/
+│   ├── core/        config · database · security · limiter · dependencies
+│   ├── models/      user · job · resume · application · email_log
+│   ├── routers/     auth · password_reset · jobs · resumes · applications · admin · users · chat
+│   ├── schemas/     Pydantic models
+│   ├── services/    ai_engine · ranking · verifier · resume_validator · email · otp · chat
+│   └── main.py
+├── scripts/         init_db.py · manage_admin.py
+├── tests/           pytest suite
+└── requirements.txt
+frontend/
+├── app.py · api.py · chat_widget.py
+├── pages/           home · login · sign_up · admin_2FA_login · dashboard · jobs · applications · …
+└── tests/           chat widget tests
+```
 
 ---
 
 ## 🌍 Deployment
 
-### Backend (Render)
-1. Connect GitHub repo to Render
-2. Set root directory to `backend`
-3. Set start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-4. Add environment variables
+**Backend (Render)** — root `backend`, build `pip install -r requirements.txt`, start:
+```
+uvicorn app.main:app --host 0.0.0.0 --port $PORT
+```
+Set the environment variables above. Uploaded files live on the instance disk, which is wiped on redeploy (parsed text is kept in the database).
+If every visitor shares one rate-limit bucket, sign in as admin and open `/admin/client-ip`, then raise `TRUSTED_PROXY_HOPS`.
 
-### Frontend (Streamlit Cloud)
-1. Connect GitHub repo to Streamlit Cloud
-2. Set main file path to `frontend/app.py`
-3. Add secrets in Settings → Secrets
+**Frontend (Streamlit Cloud)** — main file `frontend/app.py`; secret `API_URL = "https://<your-render-app>.onrender.com"`.
 
 ---
 
 ## 👨‍💻 Author
-
-**Allan Kamau**
-- GitHub: [@Allankw-dev](https://github.com/Allankw-dev)
-- Email: allankamau517@gmail.com
-- Ko-fi: [ko-fi.com/allankamau20](https://ko-fi.com/allankamau20)
-
----
+**Allan Kamau** — [@Allankw-dev](https://github.com/Allankw-dev) · [Ko-fi](https://ko-fi.com/allankamau20)
 
 ## 📄 License
+MIT
 
-This project is licensed under the MIT License.
-
----
-
-<div align="center">
-  <strong>Built with ❤️ in Nairobi, Kenya 🇰🇪</strong>
-</div>
-
-
-
-
-
-
-
-
+<div align="center"><strong>Built with ❤️ in Nairobi, Kenya 🇰🇪</strong></div>

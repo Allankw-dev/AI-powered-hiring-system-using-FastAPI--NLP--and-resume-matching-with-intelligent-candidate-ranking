@@ -1,47 +1,57 @@
-from pydantic import BaseModel, EmailStr, validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
+
+from app.core.security import validate_password_strength
 
 
 class SignupRequest(BaseModel):
     full_name: str
     email: EmailStr
     password: str
-    sex: str
+    # No longer collected (not used for scoring, and a hiring tool should not
+    # need it). Old clients may still send it - it is accepted and ignored.
+    sex: str | None = Field(default=None, exclude=True)
 
-    @validator("password")
-    def password_strength(cls, v):
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters")
-        if not any(c.isupper() for c in v):
-            raise ValueError("Password must contain at least one uppercase letter")
-        if not any(c.islower() for c in v):
-            raise ValueError("Password must contain at least one lowercase letter")
-        if not any(c.isdigit() for c in v):
-            raise ValueError("Password must contain at least one number")
-        return v
+    @field_validator("password")
+    @classmethod
+    def password_strength(cls, v: str) -> str:
+        return validate_password_strength(v)
 
-    @validator("full_name")
-    def name_valid(cls, v):
-        if len(v.strip()) < 2:
+    @field_validator("full_name")
+    @classmethod
+    def name_valid(cls, v: str) -> str:
+        v = v.strip()
+        if len(v) < 2:
             raise ValueError("Full name must be at least 2 characters")
+        if len(v) > 255:
+            raise ValueError("Full name is too long")
         if any(c.isdigit() for c in v):
             raise ValueError("Full name cannot contain numbers")
-        return v.strip()
-
-    @validator("sex")
-    def sex_valid(cls, v):
-        if v not in ["Male", "Female", "Other"]:
-            raise ValueError("Sex must be Male, Female, or Other")
         return v
+
+    @field_validator("email")
+    @classmethod
+    def email_lower(cls, v: str) -> str:
+        return v.strip().lower()
 
 
 class LoginRequest(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(max_length=256)
+
+    @field_validator("email")
+    @classmethod
+    def email_lower(cls, v: str) -> str:
+        return v.strip().lower()
 
 
 class AdminOTPVerifyRequest(BaseModel):
     email: EmailStr
-    otp_code: str
+    otp_code: str = Field(min_length=1, max_length=10)
+
+    @field_validator("email")
+    @classmethod
+    def email_lower(cls, v: str) -> str:
+        return v.strip().lower()
 
 
 class TokenResponse(BaseModel):

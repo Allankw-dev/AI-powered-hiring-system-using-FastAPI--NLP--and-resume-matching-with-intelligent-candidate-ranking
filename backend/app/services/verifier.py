@@ -56,8 +56,10 @@ def check_keyword_stuffing(text: str) -> tuple:
     score_deduction = 0
 
     common_keywords = ["python", "java", "sql", "excel", "management", "leadership"]
+    lowered = text.lower()
     for keyword in common_keywords:
-        count = text.lower().count(keyword)
+        # whole words only: "java" must not count every "javascript"
+        count = len(re.findall(rf"\b{re.escape(keyword)}\b", lowered))
         if count > 15:
             flags.append(f"keyword_stuffing_{keyword}")
             score_deduction += 15

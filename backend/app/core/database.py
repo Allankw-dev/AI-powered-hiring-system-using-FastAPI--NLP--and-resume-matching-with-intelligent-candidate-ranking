@@ -1,22 +1,24 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
+
 from app.core.config import settings
 
-engine = create_engine(
-    settings.DATABASE_URL,
-    echo=False,          # Turn off in production — stops printing every SQL query
-    future=True,
-    pool_size=5,         # Keep 5 connections open at all times
-    max_overflow=10,     # Allow 10 extra connections if needed
-    pool_timeout=30,     # Wait max 30 seconds for a connection
-    pool_recycle=1800,   # Recycle connections every 30 minutes
-    pool_pre_ping=True,  # Check connection is alive before using it
-)
+_url = settings.DATABASE_URL
+_kwargs: dict = {"echo": False, "future": True, "pool_pre_ping": True}
 
-SessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine
-)
+if _url.startswith("sqlite"):
+    # Used by the test-suite only.
+    _kwargs["connect_args"] = {"check_same_thread": False}
+else:
+    _kwargs.update(
+        pool_size=5,        # connections kept open
+        max_overflow=10,    # extra connections under load
+        pool_timeout=30,    # seconds to wait for a connection
+        pool_recycle=1800,  # recycle connections every 30 minutes
+    )
+
+engine = create_engine(_url, **_kwargs)
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()

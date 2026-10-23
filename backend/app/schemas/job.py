@@ -1,12 +1,12 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class JobCreate(BaseModel):
-    title: str
-    company: str
-    description: str
-    required_skills: str = ""
-    min_experience: float = 0
+    title: str = Field(min_length=2, max_length=150)
+    company: str = Field(min_length=1, max_length=150)
+    description: str = Field(min_length=10, max_length=10000)
+    required_skills: str = Field(default="", max_length=2000)
+    min_experience: float = Field(default=0, ge=0, le=50)
 
 
 class JobOut(BaseModel):
@@ -17,5 +17,4 @@ class JobOut(BaseModel):
     required_skills: str | None = None
     min_experience: float
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}

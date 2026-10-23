@@ -1,44 +1,69 @@
+import logging
 import os
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
+from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+
 from app.core.config import settings
-from app.routers import auth, jobs, resumes, applications, admin
-from app.routers import users
-from app.routers import password_reset
-from pydantic import BaseModel
-import httpx
+from app.core.limiter import limiter
+from app.routers import admin, applications, auth, chat, jobs, password_reset, resumes, users
 
-os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+logger = logging.getLogger("app")
 
-# ── RATE LIMITER ──
-limiter = Limiter(key_func=get_remote_address)
 
-app = FastAPI(title="AI Hiring Platform", version="1.0.0")
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+    if not settings.email_configured:
+        logger.warning("No email provider configured: admin 2FA codes and reset emails cannot be sent.")
+    if not (settings.ANTHROPIC_API_KEY or settings.GEMINI_API_KEY):
+        logger.warning("No chat API key configured: the Hira assistant is disabled.")
+    yield
 
-# ── RATE LIMITER SETUP ──
+
+app = FastAPI(title="AI Hiring Platform", version="1.1.0", lifespan=lifespan)
+
+# ── Rate limiting ──
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# ── CORS MIDDLEWARE ──
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "Too many requests. Please wait a moment and try again."},
+        headers={"Retry-After": "60"},
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_error_handler(request: Request, exc: Exception):
+    # Details go to the server log, never to the client.
+    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+
+
+app.add_middleware(SlowAPIMiddleware)
+
+# ── CORS ──
+# The API uses bearer tokens (no cookies), so credentials are never needed.
+# Restrict with CORS_ORIGINS="https://your-app.streamlit.app" if you want to.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=settings.cors_origin_list,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
-# ── ROUTERS ──
-app.include_router(auth.router)
-app.include_router(jobs.router)
-app.include_router(resumes.router)
-app.include_router(applications.router)
-app.include_router(admin.router)
-app.include_router(users.router)
-app.include_router(password_reset.router)
+# ── Routers ──
+for module in (auth, jobs, resumes, applications, admin, users, password_reset, chat):
+    app.include_router(module.router)
 
 
 @app.api_route("/", methods=["GET", "HEAD"])
@@ -49,63 +74,3 @@ def home():
 @app.api_route("/health", methods=["GET", "HEAD"])
 def health():
     return {"status": "ok"}
-
-
-class ChatMessage(BaseModel):
-    message: str
-    history: list = []
-
-
-@app.post("/chat")
-async def chat(payload: ChatMessage):
-    GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-
-    if not GEMINI_API_KEY:
-        return {"reply": "Chat is temporarily unavailable."}
-
-    system = """You are Hira, an AI assistant for an AI-powered hiring platform. You help both candidates and admins.
-
-PLATFORM DETAILS:
-- Built with FastAPI backend, Streamlit frontend, PostgreSQL on Supabase
-- AI scoring: Semantic (45%), Skills (25%), Experience (20%), Verification (10%)
-- Features: Resume upload, AI scoring, job matching, fraud detection, admin panel
-- Fraud detection: keyword stuffing, inconsistent dates, short resumes, missing contact info
-- Candidates: sign up, upload resumes, apply for jobs, track applications in dashboard
-- Admins: post/edit/delete jobs, view top candidates, shortlist/reject, send emails
-
-Be helpful, concise, friendly and accurate. Answer ANY question asked.
-Keep responses under 200 words unless more detail is needed."""
-
-    # Build conversation for Gemini
-    contents = []
-    for msg in payload.history:
-        contents.append({
-            "role": "user" if msg["role"] == "user" else "model",
-            "parts": [{"text": msg["content"]}]
-        })
-    contents.append({"role": "user", "parts": [{"text": payload.message}]})
-
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}",
-                headers={"Content-Type": "application/json"},
-                json={
-                    "system_instruction": {"parts": [{"text": system}]},
-                    "contents": contents,
-                    "generationConfig": {"maxOutputTokens": 500}
-                },
-                timeout=30.0
-            )
-            data = response.json()
-
-            if response.status_code != 200:
-                print(f"Gemini API error: {data}")
-                return {"reply": "Sorry, I'm having trouble right now. Please try again!"}
-
-            reply = data["candidates"][0]["content"]["parts"][0]["text"]
-            return {"reply": reply}
-
-    except Exception as e:
-        print(f"Chat error: {str(e)}")
-        return {"reply": "Sorry, something went wrong. Please try again!"}

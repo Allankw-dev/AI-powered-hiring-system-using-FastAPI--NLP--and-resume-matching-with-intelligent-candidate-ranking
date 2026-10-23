@@ -1,6 +1,6 @@
 import requests
 import streamlit as st
-from api import login
+from api import login, error_message
 import time
 
 
@@ -250,19 +250,17 @@ def render():
                             st.rerun()
 
                         else:
-                            # Show exact error from backend
-                            try:
-                                detail = response.json().get("detail", "Login failed.")
-                            except Exception:
-                                detail = f"Login failed. (HTTP {response.status_code})"
-                            st.error(f"❌ {detail}")
+                            detail = error_message(response, f"Login failed. (HTTP {response.status_code})")
 
-                            # Temporary debug — remove once login works
-                            with st.expander("🔍 Debug info"):
+                            if response.status_code == 403 and "2FA" in detail:
+                                # Admins can only sign in with the one-time code flow.
+                                st.warning("🛡️ Admin accounts must sign in with two-factor authentication.")
                                 try:
-                                    st.json(response.json())
+                                    st.page_link("pages/admin_2FA_login.py", label="Go to Admin 2FA login", icon="🛡️")
                                 except Exception:
-                                    st.code(response.text)
+                                    st.info("Open the Admin 2FA login page to continue.")
+                            else:
+                                st.error(f"❌ {detail}")
 
                 except requests.exceptions.Timeout:
                     st.warning("⏳ Server is waking up — please wait 30 seconds and try again.")

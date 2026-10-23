@@ -1,5 +1,5 @@
 import streamlit as st
-from api import reset_password
+from api import reset_password, error_message
 
 
 def render():
@@ -166,13 +166,12 @@ def render():
         with st.form("reset_password_form"):
             new_password = st.text_input("🔑 New Password", type="password")
             confirm_password = st.text_input("🔑 Confirm New Password", type="password")
+            st.caption("At least 8 characters with an uppercase letter, a lowercase letter and a number.")
             submitted = st.form_submit_button("⚡ RESET PASSWORD", use_container_width=True)
 
         if submitted:
             if not new_password or not confirm_password:
                 st.warning("⚠️ Please fill in both fields.")
-            elif len(new_password) < 8:
-                st.error("❌ Password must be at least 8 characters.")
             elif new_password != confirm_password:
                 st.error("❌ Passwords do not match.")
             else:
@@ -184,10 +183,7 @@ def render():
                     st.balloons()
                     st.rerun()
                 else:
-                    try:
-                        st.error(response.json().get("detail", "Could not reset password."))
-                    except Exception:
-                        st.error("Could not reset password.")
+                    st.error(error_message(response, "Could not reset password."))
 
         st.markdown('<div class="neon-divider"></div>', unsafe_allow_html=True)
 

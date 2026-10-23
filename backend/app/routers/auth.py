@@ -1,160 +1,118 @@
-from datetime import datetime
-import os
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from slowapi import Limiter
-from slowapi.util import get_remote_address
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.dep import get_db
-from app.core.security import hash_password, verify_password, create_access_token
+from app.core.limiter import limiter
+from app.core.security import DUMMY_PASSWORD_HASH, create_access_token, hash_password, verify_password
 from app.models.user import User
-from app.schemas.auth import SignupRequest, LoginRequest, TokenResponse, AdminOTPVerifyRequest
+from app.schemas.auth import AdminOTPVerifyRequest, LoginRequest, SignupRequest, TokenResponse
 from app.schemas.user import UserOut
-from app.services.otp_service import generate_otp, otp_expiration
+from app.services import otp_service
+from app.services.email_service import EmailError, send_otp_email
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["Authentication"])
-limiter = Limiter(key_func=get_remote_address)
 
-ADMIN_EMAILS = [e.strip() for e in os.environ.get("ADMIN_EMAILS", "allankamauw20@gmail.com").split(",")]
+ADMIN_2FA_REQUIRED = "Admin accounts must sign in with two-factor authentication (Admin 2FA login)."
+BAD_CREDENTIALS = "Invalid email or password"
+BAD_OTP = "Invalid or expired code"
+
+
+def _check_credentials(db: Session, email: str, password: str) -> User:
+    """Constant-time-ish credential check (same work whether or not the email exists)."""
+    user = db.query(User).filter(User.email == email).first()
+    stored_hash = user.password_hash if user else DUMMY_PASSWORD_HASH
+    password_ok = verify_password(password, stored_hash)
+    if not user or not password_ok:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=BAD_CREDENTIALS)
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This account has been disabled")
+    return user
+
+
+def _token_for(user: User) -> dict:
+    token = create_access_token({"user_id": user.id, "email": user.email, "role": user.role})
+    return {"access_token": token, "token_type": "bearer", "role": user.role}
 
 
 @router.post("/signup", response_model=UserOut)
 @limiter.limit("3/minute")
 def signup(request: Request, payload: SignupRequest, db: Session = Depends(get_db)):
+    if db.query(User).filter(User.email == payload.email).first():
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    # Self-service signup can only ever create candidates. Admins are created
+    # or promoted with `python -m scripts.manage_admin` (needs server access).
+    user = User(
+        full_name=payload.full_name,
+        email=payload.email,
+        password_hash=hash_password(payload.password),
+        role="candidate",
+        is_active=True,
+    )
+    db.add(user)
     try:
-        existing = db.query(User).filter(User.email == payload.email).first()
-        if existing:
-            raise HTTPException(status_code=400, detail="Email already registered")
-
-        role = "admin" if payload.email in ADMIN_EMAILS else "candidate"
-
-        user = User(
-            full_name=payload.full_name,
-            email=payload.email,
-            password_hash=hash_password(payload.password),
-            role=role,
-            is_active=True
-        )
-
-        db.add(user)
         db.commit()
-        db.refresh(user)
-
-        return user
-
-    except HTTPException:
-        raise
-    except Exception as e:
+    except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=400, detail="Email already registered")
+    db.refresh(user)
+    return user
 
 
 @router.post("/login", response_model=TokenResponse)
 @limiter.limit("5/minute")
 def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)):
-    try:
-        user = db.query(User).filter(User.email == payload.email).first()
+    user = _check_credentials(db, payload.email, payload.password)
 
-        # Same error for both wrong email and wrong password (prevents enumeration)
-        if not user or not verify_password(payload.password, user.password_hash):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid email or password"
-            )
+    # A password alone must never be enough for an admin.
+    if user.role == "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ADMIN_2FA_REQUIRED)
 
-        token = create_access_token({
-            "user_id": user.id,
-            "email": user.email,
-            "role": user.role
-        })
-
-        return {
-            "access_token": token,
-            "token_type": "bearer",
-            "role": user.role
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return _token_for(user)
 
 
 @router.post("/admin/request-otp")
 @limiter.limit("3/minute")
 def admin_request_otp(request: Request, payload: LoginRequest, db: Session = Depends(get_db)):
+    user = _check_credentials(db, payload.email, payload.password)
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    otp = otp_service.save_otp(db, user)
+
+    if settings.OTP_DELIVERY == "log":
+        logger.warning("ADMIN OTP for %s: %s", user.email, otp)
+        return {"message": "Code generated. Check the server log."}
+
     try:
-        user = db.query(User).filter(User.email == payload.email).first()
+        send_otp_email(user.email, otp)
+    except EmailError:
+        logger.exception("Could not deliver the admin OTP email")
+        otp_service.clear_otp(db, user)
+        raise HTTPException(status_code=503, detail="Could not send the sign-in code. Check the email settings.")
 
-        if not user or not verify_password(payload.password, user.password_hash):
-            raise HTTPException(status_code=401, detail="Invalid email or password")
-
-        if user.role != "admin":
-            raise HTTPException(status_code=403, detail="Admin access required")
-
-        otp = generate_otp()
-        expiry = otp_expiration()
-
-        user.otp_code = otp
-        user.otp_expiry = expiry
-        db.commit()
-
-        print(f"\nADMIN OTP for {user.email}: {otp}\n")
-
-        return {"message": "OTP generated. Check backend terminal."}
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+    return {"message": "A 6-digit code has been sent to your email address."}
 
 
 @router.post("/admin/verify-otp", response_model=TokenResponse)
-@limiter.limit("5/minute")
+@limiter.limit("10/minute")
 def admin_verify_otp(request: Request, payload: AdminOTPVerifyRequest, db: Session = Depends(get_db)):
-    try:
-        user = db.query(User).filter(User.email == payload.email).first()
+    user = db.query(User).filter(User.email == payload.email).first()
 
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+    # Same message for every failure so nothing about the account leaks.
+    if not user or user.role != "admin" or not user.is_active:
+        raise HTTPException(status_code=400, detail=BAD_OTP)
 
-        if user.role != "admin":
-            raise HTTPException(status_code=403, detail="Admin access required")
+    if not otp_service.otp_matches(user, payload.otp_code):
+        if otp_service.register_failure(user.email) >= otp_service.MAX_ATTEMPTS:
+            otp_service.clear_otp(db, user)
+            raise HTTPException(status_code=400, detail="Too many wrong codes. Request a new code.")
+        raise HTTPException(status_code=400, detail=BAD_OTP)
 
-        if not user.otp_code or not user.otp_expiry:
-            raise HTTPException(status_code=400, detail="No OTP requested")
-
-        if user.otp_code != payload.otp_code:
-            raise HTTPException(status_code=400, detail="Invalid OTP")
-
-        expiry = user.otp_expiry
-        if expiry.tzinfo is None:
-            from datetime import timezone
-            expiry = expiry.replace(tzinfo=timezone.utc)
-
-        if datetime.now(datetime.timezone.utc) > expiry:
-            raise HTTPException(status_code=400, detail="OTP expired")
-
-        user.otp_code = None
-        user.otp_expiry = None
-        db.commit()
-
-        token = create_access_token({
-            "user_id": user.id,
-            "email": user.email,
-            "role": user.role
-        })
-
-        return {
-            "access_token": token,
-            "token_type": "bearer",
-            "role": user.role
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+    otp_service.clear_otp(db, user)
+    return _token_for(user)

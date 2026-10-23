@@ -1,5 +1,5 @@
 import streamlit as st
-from api import sign_up, login
+from api import sign_up, login, error_message
 
 
 def render():
@@ -122,7 +122,7 @@ def render():
             with col2:
                 confirm_password = st.text_input(" Confirm Password", type="password")
 
-            sex = st.selectbox("⚧ Gender", ["Male", "Female", "Other"])
+            st.caption("Password: at least 8 characters with an uppercase letter, a lowercase letter and a number.")
             submitted = st.form_submit_button(" CREATE ACCOUNT", use_container_width=True)
 
         if submitted:
@@ -132,7 +132,7 @@ def render():
                 st.error("❌ Passwords do not match.")
             else:
                 with st.spinner("Creating your account... please wait"):
-                    response = sign_up(full_name, email, password, sex)
+                    response = sign_up(full_name, email, password)
 
                 if response.status_code in [200, 201]:
                     st.success("✅ Account created! Logging you in...")
@@ -154,10 +154,7 @@ def render():
                         st.session_state["page"] = "Login"
                         st.rerun()
                 else:
-                    try:
-                        st.error(response.json().get("detail", "Sign up failed."))
-                    except Exception:
-                        st.error("Sign up failed.")
+                    st.error(error_message(response, "Sign up failed."))
 
         st.markdown("""
         <div class="bottom-stats">

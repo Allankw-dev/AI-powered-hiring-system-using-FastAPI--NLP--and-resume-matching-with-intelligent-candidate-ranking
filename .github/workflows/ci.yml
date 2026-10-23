@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+      - run: python -m pytest
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Frontend files compile
+        run: python -m compileall -q frontend
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Chat widget tests (jsdom)
+        working-directory: frontend/tests
+        run: |
+          npm install --no-save jsdom
+          python test_chat_widget.py
+          python build_widget_js.py
+          node widget.jsdom.test.js

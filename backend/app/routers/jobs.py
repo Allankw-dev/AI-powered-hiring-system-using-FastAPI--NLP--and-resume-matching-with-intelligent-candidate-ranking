@@ -1,8 +1,9 @@
+import bleach
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-import bleach
 
-from app.core.dep import get_db, get_current_user
+from app.core.dep import get_current_user, get_db, require_admin
+from app.models.application import Application
 from app.models.job import Job
 from app.models.user import User
 from app.schemas.job import JobCreate
@@ -10,34 +11,23 @@ from app.schemas.job import JobCreate
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
 
 
-def sanitize(text: str) -> str:
-    """Remove any malicious HTML/scripts from input"""
+def sanitize(text: str | None) -> str | None:
+    """Strip any HTML/script from admin input."""
     if not text:
         return text
     return bleach.clean(text.strip(), strip=True)
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
-def create_job(
-    payload: JobCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can create jobs"
-        )
-
+def create_job(payload: JobCreate, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
     job = Job(
         title=sanitize(payload.title),
         company=sanitize(payload.company),
         description=sanitize(payload.description),
         required_skills=sanitize(payload.required_skills),
         min_experience=payload.min_experience,
-        created_by=current_user.id
+        created_by=current_user.id,
     )
-
     db.add(job)
     db.commit()
     db.refresh(job)
@@ -45,25 +35,15 @@ def create_job(
 
 
 @router.get("/")
-def list_jobs(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
+def list_jobs(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return db.query(Job).order_by(Job.id.desc()).all()
 
 
 @router.get("/{job_id}")
-def get_job(
-    job_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
+def get_job(job_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     job = db.query(Job).filter(Job.id == job_id).first()
     if not job:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Job not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
     return job
 
 
@@ -72,11 +52,8 @@ def update_job(
     job_id: int,
     payload: JobCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_admin),
 ):
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Only admins can edit jobs")
-
     job = db.query(Job).filter(Job.id == job_id).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -93,17 +70,17 @@ def update_job(
 
 
 @router.delete("/{job_id}")
-def delete_job(
-    job_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Only admins can delete jobs")
-
+def delete_job(job_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
     job = db.query(Job).filter(Job.id == job_id).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
+
+    application_count = db.query(Application).filter(Application.job_id == job_id).count()
+    if application_count:
+        raise HTTPException(
+            status_code=409,
+            detail=f"This job has {application_count} application(s) and cannot be deleted. Reject them first or keep the job.",
+        )
 
     db.delete(job)
     db.commit()
