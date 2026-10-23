@@ -64,6 +64,13 @@ def _normalize_history(history: list[dict]) -> list[dict]:
     return cleaned
 
 
+def _check(resp: httpx.Response, provider: str) -> None:
+    """Log WHY a provider rejected the request (the body never contains our key), then raise."""
+    if resp.status_code >= 400:
+        logger.error("%s API returned %s: %s", provider, resp.status_code, resp.text[:300])
+    resp.raise_for_status()
+
+
 async def _ask_claude(client: httpx.AsyncClient, message: str, history: list[dict]) -> str:
     messages = _normalize_history(history)
     if messages and messages[-1]["role"] == "user":
@@ -79,7 +86,7 @@ async def _ask_claude(client: httpx.AsyncClient, message: str, history: list[dic
         },
         json={"model": settings.ANTHROPIC_MODEL, "max_tokens": 500, "system": SYSTEM_PROMPT, "messages": messages},
     )
-    resp.raise_for_status()
+    _check(resp, "Claude")
     blocks = resp.json().get("content", [])
     return "".join(b.get("text", "") for b in blocks if b.get("type") == "text").strip()
 
@@ -99,23 +106,27 @@ async def _ask_gemini(client: httpx.AsyncClient, message: str, history: list[dic
             "generationConfig": {"maxOutputTokens": 500},
         },
     )
-    resp.raise_for_status()
+    _check(resp, "Gemini")
     return resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
 
 
 async def generate_reply(message: str, history: list[dict]) -> str:
-    if not (settings.ANTHROPIC_API_KEY or settings.GEMINI_API_KEY):
+    providers = []
+    if settings.ANTHROPIC_API_KEY:
+        providers.append(("Claude", _ask_claude))
+    if settings.GEMINI_API_KEY:
+        providers.append(("Gemini", _ask_gemini))
+    if not providers:
         return UNAVAILABLE
 
     _take_daily_slot()  # may raise ChatLimitReached
 
-    try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            if settings.ANTHROPIC_API_KEY:
-                reply = await _ask_claude(client, message, history)
-            else:
-                reply = await _ask_gemini(client, message, history)
-        return reply or TROUBLE
-    except (httpx.HTTPError, KeyError, IndexError, ValueError):
-        logger.exception("Chat provider call failed")
-        return TROUBLE
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        for name, ask in providers:
+            try:
+                reply = await ask(client, message, history)
+                if reply:
+                    return reply
+            except (httpx.HTTPError, KeyError, IndexError, ValueError) as exc:
+                logger.warning("Chat provider %s failed: %s", name, exc)
+    return TROUBLE

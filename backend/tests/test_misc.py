@@ -165,3 +165,24 @@ def test_provider_failure_returns_friendly_message(client, monkeypatch):
     chat_service._usage["count"] = 0
     r = client.post("/chat", json={"message": "hello"})
     assert r.status_code == 200 and "trouble" in r.json()["reply"].lower()
+
+
+def test_claude_failure_falls_back_to_gemini_and_logs_the_reason(client, monkeypatch, caplog):
+    import httpx
+    from app.services import chat_service
+
+    def handler(request: httpx.Request):
+        if "anthropic" in str(request.url):
+            return httpx.Response(400, json={"error": {"message": "Your credit balance is too low"}})
+        return httpx.Response(200, json={"candidates": [{"content": {"parts": [{"text": "Gemini to the rescue"}]}}]})
+
+    monkeypatch.setattr(chat_service.settings, "ANTHROPIC_API_KEY", "sk-ant-secret")
+    monkeypatch.setattr(chat_service.settings, "GEMINI_API_KEY", "gem-secret")
+    _mock_httpx(monkeypatch, handler)
+    chat_service._usage["count"] = 0
+
+    with caplog.at_level("ERROR"):
+        r = client.post("/chat", json={"message": "hello"})
+    assert r.json() == {"reply": "Gemini to the rescue"}
+    assert "credit balance is too low" in caplog.text           # the reason is visible in the logs
+    assert "sk-ant-secret" not in caplog.text and "gem-secret" not in caplog.text  # ...but never a key
