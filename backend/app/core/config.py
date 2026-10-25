@@ -55,7 +55,7 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str = ""
     ANTHROPIC_MODEL: str = "claude-haiku-5-5"
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_MODEL: str = "gemini-3.8-flash"   # override with the GEMINI_MODEL env var if Google renames it
     CHAT_DAILY_LIMIT: int = 1000      # hard cap on chat calls per day (cost control)
 
     @model_validator(mode="after")

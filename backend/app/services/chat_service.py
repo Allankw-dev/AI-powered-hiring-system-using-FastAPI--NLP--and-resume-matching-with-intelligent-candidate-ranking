@@ -3,6 +3,7 @@
 Provider order: Claude (ANTHROPIC_API_KEY) -> Gemini (GEMINI_API_KEY).
 Keys travel in headers (never in the URL) and a daily cap protects your quota.
 """
+import asyncio
 import logging
 import threading
 from datetime import date
@@ -71,13 +72,30 @@ def _check(resp: httpx.Response, provider: str) -> None:
     resp.raise_for_status()
 
 
+# Temporary provider problems worth retrying (rate limit / overloaded / 5xx).
+_TRANSIENT = {429, 500, 502, 503, 504, 529}
+_ATTEMPTS = 3
+
+
+async def _post(client: httpx.AsyncClient, provider: str, url: str, **kwargs) -> httpx.Response:
+    """POST, retrying briefly on temporary errors. Real errors (400/401/403/404) are returned at once."""
+    for attempt in range(1, _ATTEMPTS + 1):
+        resp = await client.post(url, **kwargs)
+        if resp.status_code not in _TRANSIENT or attempt == _ATTEMPTS:
+            return resp
+        logger.warning("%s returned %s, retrying (%s/%s)", provider, resp.status_code, attempt, _ATTEMPTS - 1)
+        await asyncio.sleep(1.5 * attempt)
+    return resp
+
+
 async def _ask_claude(client: httpx.AsyncClient, message: str, history: list[dict]) -> str:
     messages = _normalize_history(history)
     if messages and messages[-1]["role"] == "user":
         messages[-1]["content"] += "\n" + message
     else:
         messages.append({"role": "user", "content": message})
-    resp = await client.post(
+    resp = await _post(
+        client, "Claude",
         "https://api.anthropic.com/v1/messages",
         headers={
             "x-api-key": settings.ANTHROPIC_API_KEY,
@@ -97,7 +115,8 @@ async def _ask_gemini(client: httpx.AsyncClient, message: str, history: list[dic
         for t in _normalize_history(history)
     ]
     contents.append({"role": "user", "parts": [{"text": message}]})
-    resp = await client.post(
+    resp = await _post(
+        client, "Gemini",
         f"https://generativelanguage.googleapis.com/v1beta/models/{settings.GEMINI_MODEL}:generateContent",
         headers={"x-goog-api-key": settings.GEMINI_API_KEY, "content-type": "application/json"},
         json={

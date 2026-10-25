@@ -186,3 +186,58 @@ def test_claude_failure_falls_back_to_gemini_and_logs_the_reason(client, monkeyp
     assert r.json() == {"reply": "Gemini to the rescue"}
     assert "credit balance is too low" in caplog.text           # the reason is visible in the logs
     assert "sk-ant-secret" not in caplog.text and "gem-secret" not in caplog.text  # ...but never a key
+
+
+# ── temporary provider errors are retried, real errors are not ──
+def _no_sleep(monkeypatch):
+    from app.services import chat_service
+
+    async def instant(_):
+        return None
+    monkeypatch.setattr(chat_service.asyncio, "sleep", instant)
+
+
+def test_gemini_overload_is_retried_then_succeeds(client, monkeypatch):
+    import httpx
+    from app.services import chat_service
+    calls = []
+
+    def handler(request: httpx.Request):
+        calls.append(1)
+        if len(calls) < 3:
+            return httpx.Response(503, json={"error": {"status": "UNAVAILABLE"}})
+        return httpx.Response(200, json={"candidates": [{"content": {"parts": [{"text": "Finally!"}]}}]})
+
+    monkeypatch.setattr(chat_service.settings, "ANTHROPIC_API_KEY", "")
+    monkeypatch.setattr(chat_service.settings, "GEMINI_API_KEY", "gem-test")
+    _mock_httpx(monkeypatch, handler); _no_sleep(monkeypatch)
+    chat_service._usage["count"] = 0
+
+    assert client.post("/chat", json={"message": "hello"}).json() == {"reply": "Finally!"}
+    assert len(calls) == 3
+
+
+def test_persistent_overload_gives_friendly_message_after_three_tries(client, monkeypatch):
+    import httpx
+    from app.services import chat_service
+    calls = []
+    monkeypatch.setattr(chat_service.settings, "ANTHROPIC_API_KEY", "")
+    monkeypatch.setattr(chat_service.settings, "GEMINI_API_KEY", "gem-test")
+    _mock_httpx(monkeypatch, lambda r: (calls.append(1), httpx.Response(503, json={}))[1]); _no_sleep(monkeypatch)
+    chat_service._usage["count"] = 0
+
+    r = client.post("/chat", json={"message": "hello"})
+    assert r.status_code == 200 and "trouble" in r.json()["reply"].lower() and len(calls) == 3
+
+
+def test_real_errors_are_not_retried(client, monkeypatch):
+    import httpx
+    from app.services import chat_service
+    calls = []
+    monkeypatch.setattr(chat_service.settings, "ANTHROPIC_API_KEY", "sk-ant-test")
+    monkeypatch.setattr(chat_service.settings, "GEMINI_API_KEY", "")
+    _mock_httpx(monkeypatch, lambda r: (calls.append(1), httpx.Response(400, json={"error": "credits"}))[1]); _no_sleep(monkeypatch)
+    chat_service._usage["count"] = 0
+
+    client.post("/chat", json={"message": "hello"})
+    assert len(calls) == 1
