@@ -10,26 +10,6 @@ def render():
         st.session_state.page = nav_target
         st.rerun()
 
-    # ── LISTENER RUNNING IN THE TOP-LEVEL DOCUMENT ──
-    # The iframe below is sandboxed by Streamlit, so target="_top" links get
-    # silently blocked. Instead the iframe posts a message up to this
-    # top-level listener, which performs the real navigation.
-    st.markdown("""
-    <script>
-    (function() {
-        if (window.__navListenerAttached) return;
-        window.__navListenerAttached = true;
-        window.addEventListener('message', function(event) {
-            if (event.data && event.data.type === 'streamlit-nav' && event.data.page) {
-                const url = new URL(window.location.href);
-                url.searchParams.set('nav', event.data.page);
-                window.location.href = url.toString();
-            }
-        });
-    })();
-    </script>
-    """, unsafe_allow_html=True)
-
     components.html("""
     <!DOCTYPE html>
     <html>
@@ -322,8 +302,19 @@ def render():
     </div>
 
     <script>
+        // The buttons live in a sandboxed iframe, so they cannot change the page themselves.
+        // Instead they click the matching item in the app's own top menu (a Streamlit radio),
+        // which makes Streamlit switch pages normally and keeps the user's session.
+        // (A <script> placed in st.markdown is never executed by the browser, so it cannot do this.)
         function navigateTo(page) {
-            window.parent.postMessage({ type: 'streamlit-nav', page: page }, '*');
+            try {
+                var labels = window.parent.document.querySelectorAll('[data-testid="stRadio"] label');
+                for (var i = 0; i < labels.length; i++) {
+                    if (labels[i].innerText.trim() === page) { labels[i].click(); return; }
+                }
+            } catch (e) { /* parent not reachable: use the fallback below */ }
+            // Fallback: reload the app with ?nav=<page>, which app.py also understands.
+            try { window.parent.location.search = '?nav=' + encodeURIComponent(page); } catch (e) {}
         }
 
         function sendHeight() {
