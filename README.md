@@ -1,4 +1,4 @@
-# 🤖 AI-Powered Hiring System..
+# 🤖 AI-Powered Hiring System
 
 > An intelligent recruitment platform built with FastAPI, Streamlit and PostgreSQL. It uses NLP and machine learning to screen resumes, score candidates and rank them for recruiters.
 
@@ -6,6 +6,9 @@
 [![Backend](https://img.shields.io/badge/Backend-Render-46E3B7?style=for-the-badge&logo=render)](https://ai-powered-hiring-system-using-fastapi-c1ya.onrender.com)
 [![Database](https://img.shields.io/badge/Database-Supabase-3ECF8E?style=for-the-badge&logo=supabase)](https://supabase.com)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python)](https://python.org)
+[![CI](https://img.shields.io/github/actions/workflow/status/Allankw-dev/AI-powered-hiring-system-using-FastAPI--NLP--and-resume-matching-with-intelligent-candidate-ranking/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/Allankw-dev/AI-powered-hiring-system-using-FastAPI--NLP--and-resume-matching-with-intelligent-candidate-ranking/actions)
+
+**Jump to:** [Features](#-features) · [Security](#-security) · [Getting started](#-getting-started) · [Scripts](#-maintenance-scripts) · [API](#-api) · [Deployment](#-deployment)
 
 ---
 
@@ -29,31 +32,39 @@
 Applications are ranked per job (`ranking_position`). Admins can re-score a job's applications after editing it.
 
 ### 👥 Roles
-- **Candidates** — sign up, upload resumes (PDF/TXT), apply, see their own matched/missing skills
+- **Candidates** — sign up, upload resumes (PDF/TXT), apply, see their own matched/missing skills, manage their profile and picture
 - **Admins** — post jobs, review AI-ranked candidates (all jobs or one job), shortlist/reject, email candidates. Admins sign in with **password + emailed one-time code**.
 
 ### 🤖 Hira assistant
-Floating chat bubble powered by **Claude** (set `ANTHROPIC_API_KEY`) or **Gemini** as a fallback (`GEMINI_API_KEY`). It has no access to anyone's account or data, is rate limited, and has a daily cap.
+Floating chat bubble powered by **Claude** (set `ANTHROPIC_API_KEY`) or **Gemini** as a fallback (`GEMINI_API_KEY`). It has no access to anyone's account or data. It is rate limited per visitor and has a daily cap.
 
-### 🔐 Security
-- JWT auth (PyJWT, tokens die when the password changes) + **Argon2id** password hashes (old bcrypt hashes upgrade on next login); strength and common-password checks on signup **and** reset
-- Login lock-out after repeated wrong passwords, per-route rate limits, per-visitor chat allowance
-- Strict CORS (only your frontend), security headers, request-size limits, `/docs` off in production
-- All secrets are `SecretStr` (never printed); TLS enforced to the database; see **[SECURITY_AUDIT.md](SECURITY_AUDIT.md)**
-- Admin 2FA is mandatory — a password alone never yields an admin token; OTPs expire in 5 minutes and die after 5 wrong guesses
-- Self-service signup can only create candidates; admins are managed with `scripts/manage_admin.py`
-- Password-reset tokens are stored hashed, single-use, 1 hour
-- Rate limiting that sees the real client IP behind Render's proxy
-- Upload checks: size limit, extension allow-list, real file signature, sanitized names
-- Output escaping in emails and the chat widget; no internal error details sent to clients
-- App refuses to start in production without a strong `SECRET_KEY`
+---
+
+## 🔐 Security
+
+Security is tested, not just claimed: the suite includes regression tests that walk **every route** to check access control, plus CI runs a dependency audit, a static scan and a secret scan on each push. The full findings and remaining risks are in **[SECURITY_AUDIT.md](SECURITY_AUDIT.md)**.
+
+| Area | What is in place |
+|------|------------------|
+| **Passwords** | Argon2id hashes (legacy bcrypt hashes are upgraded automatically on the next login). Strength rules and a common-password check on signup **and** reset. |
+| **Sessions** | JWTs (PyJWT) with required `exp`/`iat`/issuer, fixed HMAC algorithm, and a binding to the current password, so a password change or reset signs out every other device. |
+| **Admin access** | Mandatory 2FA (a password alone never yields an admin token). Codes expire in 5 minutes and die after 5 wrong guesses. The whole admin router is protected at router level, roles are read from the database (never trusted from the token), and admin actions are written to the log. Admins are created only with `scripts/manage_admin.py`. |
+| **Brute-force protection** | Per-route rate limits that see the real client IP behind Render's proxy, a temporary lock after repeated wrong passwords (per account + IP, and per account across IPs), per-visitor daily chat allowance. |
+| **Input & output** | HTML and control characters are stripped from names, job fields and email subjects. Everything the frontend renders as HTML is escaped (`frontend/safe.py`). Emails and the chat widget escape output. |
+| **Uploads** | Size limit, extension allow-list, real file-signature check, sanitised names. Files are never served statically; a user can only fetch their own profile picture. |
+| **Web hardening** | CORS limited to your frontend, security headers on every response (CSP, `X-Frame-Options`, `nosniff`, HSTS in production, no-store), request-body size limits, `/docs` off in production, no internal error details sent to clients. |
+| **Secrets & config** | All secrets are `SecretStr` and never printed. The app refuses to start in production with a weak `SECRET_KEY` or invalid settings. `scripts/check_env.py` validates a configuration without printing secrets. |
+| **Database** | Parameterised ORM queries only, TLS enforced to remote Postgres, and `scripts/enable_rls.py` locks the tables against Supabase's public REST API. |
+| **Supply chain** | Version-ranged requirements, `pip-audit` + `bandit` + secret scan in CI, Dependabot updates, least-privilege CI token. |
+
+**Found a vulnerability?** Please report it privately (GitHub → Security → *Report a vulnerability*, or contact the author) instead of opening a public issue.
 
 ---
 
 ## 🛠️ Tech stack
-**Backend:** FastAPI · SQLAlchemy · PostgreSQL (Supabase) · pdfplumber · scikit-learn · argon2-cffi/bcrypt · PyJWT · slowapi · bleach · httpx
+**Backend:** FastAPI · SQLAlchemy · PostgreSQL (Supabase) · pdfplumber · scikit-learn · argon2-cffi / bcrypt · PyJWT · slowapi · bleach · httpx
 **Frontend:** Streamlit · requests
-**Infra:** Render (API) · Streamlit Cloud (UI) · Supabase (DB) · Resend or Gmail SMTP (email)
+**Infra:** Render (API) · Streamlit Cloud (UI) · Supabase (DB) · Resend or Gmail SMTP (email) · GitHub Actions (CI)
 
 ---
 
@@ -75,14 +86,14 @@ python -m scripts.init_db        # creates any missing tables (never drops anyth
 python -m scripts.manage_admin create you@example.com --name "Your Name"
 uvicorn app.main:app --reload
 ```
-For local development set `ENVIRONMENT=development` in `.env`; with `OTP_DELIVERY=log` the admin code is printed in the terminal instead of emailed.
+For local development set `ENVIRONMENT=development` in `.env`. With `OTP_DELIVERY=log` the admin code is printed in the terminal instead of emailed. In development `/docs` is available at `http://localhost:8000/docs`.
 
 ### 2. Frontend
 ```bash
 cd frontend
 pip install -r requirements.txt
 ```
-`.streamlit/secrets.toml`:
+Create `frontend/.streamlit/secrets.toml` (it is git-ignored):
 ```toml
 API_URL = "http://localhost:8000"
 ```
@@ -93,27 +104,52 @@ Admins sign in at the **Admin 2FA login** page (`pages/admin_2FA_login.py`).
 
 ### 3. Tests
 ```bash
-cd backend && pip install -r requirements-dev.txt && python -m pytest
+cd backend
+pip install -r requirements-dev.txt
+python -m pytest                       # backend + security regression tests
+pip-audit -r requirements.txt          # known-vulnerable dependencies
+bandit -r app scripts -ll              # static security scan
+python -m scripts.scan_secrets         # secrets in tracked files
 ```
+Chat-widget (JavaScript) tests live in `frontend/tests/` and run in CI.
+
+---
+
+## 🧰 Maintenance scripts
+
+Run these from `backend/` (they use the same `.env` / environment variables as the app).
+
+| Command | What it does |
+|---------|--------------|
+| `python -m scripts.init_db` | Create any missing tables (never drops anything). |
+| `python -m scripts.manage_admin create\|promote\|demote\|set-password <email>` | The only way admins are created or changed. |
+| `python -m scripts.check_env` | Validate your configuration before deploying. Never prints a secret; exits non-zero on problems. |
+| `python -m scripts.enable_rls [--apply]` | Postgres only. Turn on row-level security for every table so Supabase's public REST API cannot read them. Dry run by default; safe to repeat. |
+| `python -m scripts.scan_secrets [--history]` | Scan tracked files (and optionally all past commits) for committed secrets. Output is redacted. |
 
 ---
 
 ## ⚙️ Environment variables
 
+Copy `backend/.env.example` and fill it in. Never commit the real `.env`.
+
 | Variable | Required | Purpose |
 |----------|----------|---------|
 | `DATABASE_URL` | ✅ | PostgreSQL URL |
-| `SECRET_KEY` | ✅ | JWT signing key (`python -c "import secrets; print(secrets.token_urlsafe(48))"`) |
+| `SECRET_KEY` | ✅ | JWT signing key, **at least 32 characters** in production (`python -c "import secrets; print(secrets.token_urlsafe(48))"`) |
 | `RESEND_API_KEY` + `EMAIL_FROM` | one of | Email over HTTPS (recommended on Render) |
-| `ADMIN_EMAIL` + `ADMIN_EMAIL_PASSWORD` | the two | Gmail SMTP fallback |
+| `ADMIN_EMAIL` + `ADMIN_EMAIL_PASSWORD` | the two | Gmail SMTP fallback (use an App Password) |
 | `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` | optional | Chat assistant (Claude first) |
-| `FRONTEND_URL` | optional | Used in password-reset links |
-| `CORS_ORIGINS` | optional | Empty (default) = only `FRONTEND_URL`. Or a comma-separated list |
+| `ENVIRONMENT` | optional | `production` (default), `development` or `test` |
+| `FRONTEND_URL` | optional | Used in password-reset links, and as the default allowed CORS origin |
+| `CORS_ORIGINS` | optional | Empty (default) = only `FRONTEND_URL`. Or a comma-separated list. |
 | `ENABLE_DOCS` | optional | `true` to expose `/docs` (off in production by default) |
-| `LOGIN_MAX_FAILURES`, `CHAT_PER_IP_DAILY_LIMIT`, `DB_SSLMODE`, `ALLOWED_HOSTS` | optional | See `.env.example` |
-| `OTP_DELIVERY` | optional | `email` (default) or `log` |
+| `OTP_DELIVERY` | optional | `email` (default) or `log` (prints the code in the server log — emergency use only) |
 | `TRUSTED_PROXY_HOPS` | optional | Proxies in front of the API (default 1) |
-| `MAX_UPLOAD_MB`, `CHAT_DAILY_LIMIT`, `ENVIRONMENT` | optional | See `.env.example` |
+| `LOGIN_MAX_FAILURES`, `LOGIN_LOCKOUT_MINUTES` | optional | Wrong-password lock-out (default 5 failures / 15 minutes) |
+| `CHAT_DAILY_LIMIT`, `CHAT_PER_IP_DAILY_LIMIT` | optional | Chat caps: all visitors together / per visitor |
+| `MAX_UPLOAD_MB` | optional | Resume size limit (default 5) |
+| `DB_SSLMODE`, `ALLOWED_HOSTS` | optional | Database TLS mode; optional Host-header allow-list |
 
 ---
 
@@ -130,7 +166,7 @@ cd backend && pip install -r requirements-dev.txt && python -m pytest
 | Users | `GET/PUT /users/me` · `POST /users/me/upload-picture` · `GET /users/me/picture` |
 | Utilities | `POST /chat` · `GET /health` |
 
-Interactive docs: `/docs` (only when `ENVIRONMENT` is not `production`, or `ENABLE_DOCS=true`).
+All routes except sign-up, login, password reset, chat and health require a bearer token. Interactive docs are at `/docs` only when `ENVIRONMENT` is not `production` (or `ENABLE_DOCS=true`).
 
 ---
 
@@ -139,34 +175,56 @@ Interactive docs: `/docs` (only when `ENVIRONMENT` is not `production`, or `ENAB
 ```
 backend/
 ├── app/
-│   ├── core/        config · database · security · limiter · dependencies
+│   ├── core/        config · database · security · dependencies · limiter · middleware · sanitize
 │   ├── models/      user · job · resume · application · email_log
 │   ├── routers/     auth · password_reset · jobs · resumes · applications · admin · users · chat
-│   ├── schemas/     Pydantic models
-│   ├── services/    ai_engine · ranking · verifier · resume_validator · email · otp · chat
+│   ├── schemas/     Pydantic request/response models (input validation + sanitising)
+│   ├── services/    ai_engine · ranking · verifier · resume_validator · email · otp · login_throttle · chat
 │   └── main.py
-├── scripts/         init_db.py · manage_admin.py
-├── tests/           pytest suite
-└── requirements.txt
+├── scripts/         init_db · manage_admin · check_env · enable_rls · scan_secrets
+├── tests/           pytest suite (functional + security regression tests)
+├── requirements.txt · requirements-dev.txt
 frontend/
-├── app.py · api.py · chat_widget.py
-├── pages/           home · login · sign_up · admin_2FA_login · dashboard · jobs · applications · …
-└── tests/           chat widget tests
+├── app.py · api.py · safe.py · chat_widget.py
+├── pages/           home · login · sign_up · admin_2FA_login · dashboard · jobs · applications · profile · …
+├── tests/           chat widget tests
+└── requirements.txt
+.streamlit/config.toml   Streamlit hardening (XSRF protection, no error details for visitors)
+.github/                 CI workflow · Dependabot
+SECURITY_AUDIT.md        Findings, fixes and remaining risks
+UPGRADE_NOTES.md         What changed between releases and what to do when deploying
 ```
 
 ---
 
 ## 🌍 Deployment
 
-**Backend (Render)** — root `backend`, build `pip install -r requirements.txt`, start:
+**Backend (Render)** — root directory `backend`, build command `pip install -r requirements.txt`, start command:
 ```
 uvicorn app.main:app --host 0.0.0.0 --port $PORT --no-server-header
 ```
-Before the first deploy run `python -m scripts.check_env`; on Supabase also run `python -m scripts.enable_rls --apply` once (see SECURITY_AUDIT.md).
 Set the environment variables above. Uploaded files live on the instance disk, which is wiped on redeploy (parsed text is kept in the database).
 If every visitor shares one rate-limit bucket, sign in as admin and open `/admin/client-ip`, then raise `TRUSTED_PROXY_HOPS`.
 
-**Frontend (Streamlit Cloud)** — main file `frontend/app.py`; secret `API_URL = "https://<your-render-app>.onrender.com"`.
+**Frontend (Streamlit Cloud)** — main file `frontend/app.py`; secret `API_URL = "https://<your-render-app>.onrender.com"` (it must be `https://`; the app refuses to talk to a remote API over plain http).
+
+**First-deploy checklist**
+1. `python -m scripts.check_env` with your production values reports no problems.
+2. Rotate any credential that has ever been committed (see [SECURITY_AUDIT.md](SECURITY_AUDIT.md)).
+3. On Supabase, run `python -m scripts.enable_rls --apply` once.
+4. Create your admin: `python -m scripts.manage_admin create you@example.com`.
+5. If the chat bubble cannot reach the API, set `CORS_ORIGINS` to your exact Streamlit URL.
+
+**Continuous integration** — every push runs the tests, a dependency vulnerability audit, a static security scan and a secret scan (backend), plus compile and widget tests (frontend). Dependabot opens weekly update pull requests.
+
+---
+
+## ⚠️ Known limitations
+- Login lock-outs, OTP attempt counters and chat caps are held in memory: they reset on restart and are not shared between several server processes (fine for a single Render instance).
+- Resumes are personal data. Parsed text is stored in the database; consider a retention policy.
+- The chat bubble and home page use `st.components.v1.html`, which Streamlit is phasing out, so Streamlit is capped below 1.67 until that is migrated.
+
+The complete list is in [SECURITY_AUDIT.md](SECURITY_AUDIT.md#4-known-limitations-and-residual-risk).
 
 ---
 
