@@ -1,6 +1,7 @@
 import streamlit as st
 import base64
-from api import my_resumes, my_applications, get_my_profile, update_my_profile, upload_profile_picture
+from api import my_resumes, my_applications, get_my_profile, update_my_profile, upload_profile_picture, get_my_picture
+from safe import esc
 
 
 def render():
@@ -136,7 +137,14 @@ def render():
     profile = profile_response.json() if profile_response.status_code == 200 else {}
     email = st.session_state.get("user_email", profile.get("email", "Unknown"))
     full_name = profile.get("full_name", "")
-    profile_picture = profile.get("profile_picture", None)
+    profile_picture = None
+    if profile.get("has_profile_picture"):
+        # The picture is fetched with the user's own token (no public URL exists) and
+        # embedded as a data: URI. Only PNG/JPEG are accepted, so nothing else can be injected.
+        pic = get_my_picture()
+        mime = pic.headers.get("content-type", "") if pic.status_code == 200 else ""
+        if mime in ("image/png", "image/jpeg"):
+            profile_picture = f"data:{mime};base64,{base64.b64encode(pic.content).decode()}"
 
     # ── PROFILE CARD ──
     left_col, right_col = st.columns([1, 2])
@@ -147,7 +155,7 @@ def render():
         if profile_picture:
             st.markdown(f"""
             <div class="avatar-wrapper">
-                <img src="{profile_picture}" style="width:100%;height:100%;object-fit:cover;" />
+                <img src="{esc(profile_picture)}" style="width:100%;height:100%;object-fit:cover;" />
             </div>
             """, unsafe_allow_html=True)
         else:
@@ -156,8 +164,8 @@ def render():
             """, unsafe_allow_html=True)
 
         st.markdown(f"""
-        <div class="profile-name">{full_name or "Your Name"}</div>
-        <div class="profile-email">{email}</div>
+        <div class="profile-name">{esc(full_name or "Your Name")}</div>
+        <div class="profile-email">{esc(email)}</div>
         <div class="role-badge">✦ Candidate</div>
         """, unsafe_allow_html=True)
 
@@ -212,11 +220,11 @@ def render():
                 status = r.get('verification_status', 'pending')
                 st.markdown(f"""
                 <div class="resume-item">
-                    <div class="resume-name">📄 {r.get('file_name', 'N/A')}</div>
+                    <div class="resume-name">📄 {esc(r.get('file_name', 'N/A'))}</div>
                     <div class="resume-meta">
-                        <div class="resume-chip">⏱ {r.get('experience_years', 0)} yrs exp</div>
-                        <div class="resume-chip">🔍 {status.upper()}</div>
-                        <div class="resume-chip">📅 {str(r.get('created_at', ''))[:10]}</div>
+                        <div class="resume-chip">⏱ {esc(r.get('experience_years', 0))} yrs exp</div>
+                        <div class="resume-chip">🔍 {esc(status.upper())}</div>
+                        <div class="resume-chip">📅 {esc(str(r.get('created_at', ''))[:10])}</div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -242,11 +250,11 @@ def render():
                 status_class = f"status-{status}" if status in ["submitted", "shortlisted", "rejected"] else "status-submitted"
                 st.markdown(f"""
                 <div class="resume-item">
-                    <div class="resume-name">💼 Job #{app.get('job_id', 'N/A')}</div>
+                    <div class="resume-name">💼 Job #{esc(app.get('job_id', 'N/A'))}</div>
                     <div class="resume-meta">
-                        <span class="{status_class}">{status.upper()}</span>
-                        <div class="resume-chip">Score: {app.get('overall_score', 'N/A')}</div>
-                        <div class="resume-chip">📅 {str(app.get('applied_at', ''))[:10]}</div>
+                        <span class="{status_class}">{esc(status.upper())}</span>
+                        <div class="resume-chip">Score: {esc(app.get('overall_score', 'N/A'))}</div>
+                        <div class="resume-chip">📅 {esc(str(app.get('applied_at', ''))[:10])}</div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)

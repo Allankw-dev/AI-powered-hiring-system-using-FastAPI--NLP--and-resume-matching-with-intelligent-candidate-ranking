@@ -104,7 +104,7 @@ for _canon, _aliases in SKILLS.items():
 
 
 def _normalize_text(text: str) -> str:
-    """Job ads are stored HTML-escaped (bleach) - undo that for scoring."""
+    """Older job ads were stored HTML-escaped (bleach); new ones are plain text. Decode either way for scoring."""
     return html.unescape(text or "")
 
 

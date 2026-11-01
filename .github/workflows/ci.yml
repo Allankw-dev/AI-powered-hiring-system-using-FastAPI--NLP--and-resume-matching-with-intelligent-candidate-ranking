@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
 
+# The workflow token can only read the repo - a compromised step cannot push or edit anything.
+permissions:
+  contents: read
+
 jobs:
   backend:
     runs-on: ubuntu-latest
@@ -19,7 +23,14 @@ jobs:
           cache: pip
           cache-dependency-path: backend/requirements-dev.txt
       - run: pip install -r requirements-dev.txt
-      - run: python -m pytest
+      - name: Tests (includes the security regression tests)
+        run: python -m pytest
+      - name: Known-vulnerability scan of dependencies
+        run: pip-audit -r requirements.txt
+      - name: Static security scan of the code
+        run: bandit -r app scripts -q -ll
+      - name: Secret scan of tracked files
+        run: python -m scripts.scan_secrets
 
   frontend:
     runs-on: ubuntu-latest
@@ -30,13 +41,17 @@ jobs:
           python-version: "3.12"
       - name: Frontend files compile
         run: python -m compileall -q frontend
+      - name: Known-vulnerability scan of dependencies
+        run: |
+          pip install pip-audit
+          pip-audit -r frontend/requirements.txt
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - name: Chat widget tests (jsdom)
         working-directory: frontend/tests
         run: |
-          npm install --no-save jsdom
+          npm install --no-save jsdom@26
           python test_chat_widget.py
           python build_widget_js.py
           node widget.jsdom.test.js

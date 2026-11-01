@@ -1,4 +1,5 @@
 import streamlit as st
+from safe import esc
 from api import my_resumes, my_applications, list_jobs
 
 
@@ -171,7 +172,7 @@ def render():
             <div class="header-title">DASHBOARD</div>
             <div class="header-sub">// Candidate Portal</div>
         </div>
-        <div class="user-badge"> {email}</div>
+        <div class="user-badge"> {esc(email)}</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -247,17 +248,17 @@ def render():
                 st.markdown(f"""
                 <div class="app-card">
                     <div class="app-header">
-                        <div class="app-job"> Job #{app.get('job_id', 'N/A')} — Applied {str(app.get('applied_at', ''))[:10]}</div>
-                        <div class="app-date">{str(app.get('applied_at', ''))[:10]}</div>
+                        <div class="app-job"> Job #{esc(app.get('job_id', 'N/A'))} — Applied {esc(str(app.get('applied_at', ''))[:10])}</div>
+                        <div class="app-date">{esc(str(app.get('applied_at', ''))[:10])}</div>
                     </div>
                     <div class="app-body">
-                        <span class="status-badge {status_class}">{status.upper()}</span>
+                        <span class="status-badge {status_class}">{esc(status.upper())}</span>
                         <div class="score-row">
-                            <div class="score-chip">Overall <span>{app.get('overall_score', 'N/A')}</span></div>
-                            <div class="score-chip">Semantic <span>{app.get('semantic_score', 'N/A')}</span></div>
-                            <div class="score-chip">Skills <span>{app.get('skills_score', 'N/A')}</span></div>
-                            <div class="score-chip">Experience <span>{app.get('experience_score', 'N/A')}</span></div>
-                            <div class="score-chip">Verification <span>{app.get('verification_score', 'N/A')}</span></div>
+                            <div class="score-chip">Overall <span>{esc(app.get('overall_score', 'N/A'))}</span></div>
+                            <div class="score-chip">Semantic <span>{esc(app.get('semantic_score', 'N/A'))}</span></div>
+                            <div class="score-chip">Skills <span>{esc(app.get('skills_score', 'N/A'))}</span></div>
+                            <div class="score-chip">Experience <span>{esc(app.get('experience_score', 'N/A'))}</span></div>
+                            <div class="score-chip">Verification <span>{esc(app.get('verification_score', 'N/A'))}</span></div>
                         </div>
                     </div>
                 </div>

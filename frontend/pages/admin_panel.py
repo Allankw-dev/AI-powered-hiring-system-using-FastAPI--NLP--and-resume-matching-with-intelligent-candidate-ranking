@@ -1,4 +1,5 @@
 import streamlit as st
+from safe import esc, plain
 from api import (
     top_candidates,
     shortlist_candidate,
@@ -69,7 +70,7 @@ def render():
         return
 
     st.markdown(
-        f'<div class="info-box">✅ Logged in as <strong>Admin</strong> • {email}</div>',
+        f'<div class="info-box">✅ Logged in as <strong>Admin</strong> • {esc(email)}</div>',
         unsafe_allow_html=True
     )
 
@@ -122,9 +123,10 @@ def render():
                 st.info("No jobs have been posted yet.")
             else:
                 for job in jobs:
-                    with st.expander(f"📋 {job.get('title')} — {job.get('company')}"):
-                        st.markdown(f"**Description:** {job.get('description', 'N/A')}")
-                        st.markdown(f"**Required Skills:** {job.get('required_skills', 'N/A')}")
+                    with st.expander(plain(f"📋 {job.get('title')} — {job.get('company')}")):
+                        # st.text shows the value literally: no HTML, no markdown links or images.
+                        st.text("Description:\n" + plain(job.get("description", "N/A")))
+                        st.text("Required Skills: " + plain(job.get("required_skills", "N/A")))
                         st.markdown(f"**Min Experience:** {job.get('min_experience', 0)} years")
 
                         col1, col2 = st.columns(2)

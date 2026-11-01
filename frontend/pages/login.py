@@ -1,7 +1,6 @@
 import requests
 import streamlit as st
 from api import login, error_message
-import time
 
 
 def render():

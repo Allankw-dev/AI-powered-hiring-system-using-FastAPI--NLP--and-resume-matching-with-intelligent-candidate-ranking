@@ -176,9 +176,9 @@ def test_shortlist_reject_and_email(client, admin_headers, candidate_headers, mo
     assert r.status_code == 200 and sent[0]["recipient_email"] == "cand@example.com"
 
 
-def test_admin_email_body_is_html_escaped():
+def test_admin_email_body_is_html_escaped(monkeypatch):
     from app.services import email_service
     captured = {}
-    email_service.send_email = lambda to, subject, body: captured.update(body=body)
+    monkeypatch.setattr(email_service, "send_email", lambda to, subject, body: captured.update(body=body))
     email_service.send_admin_email("a@b.com", "Subject", "<script>alert(1)</script>\nSecond line")
     assert "<script>" not in captured["body"] and "&lt;script&gt;" in captured["body"] and "<br>" in captured["body"]

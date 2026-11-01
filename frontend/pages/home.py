@@ -30,7 +30,7 @@ def render():
     </script>
     """, unsafe_allow_html=True)
 
-    result = components.html("""
+    components.html("""
     <!DOCTYPE html>
     <html>
     <head>

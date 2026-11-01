@@ -1,35 +1,74 @@
+"""Password hashing and access tokens.
+
+Passwords
+  * New hashes use Argon2id (memory-hard, the current OWASP first choice).
+  * Existing bcrypt hashes keep working. When a user with a bcrypt hash logs in
+    successfully, the router re-hashes the password with Argon2id (see
+    ``password_needs_rehash``), so the database upgrades itself over time.
+  * Argon2 sees the whole password. (bcrypt silently ignores everything past
+    72 bytes; that quirk is kept ONLY for verifying legacy bcrypt hashes.)
+
+Tokens
+  * PyJWT, HMAC only (algorithm is fixed by config, never read from the token).
+  * Required claims: exp, iat, iss. Each token also carries a random ``jti`` and a
+    ``pwv`` fingerprint of the password hash, so changing/resetting the password
+    signs out every device that still holds an old token.
+"""
 import hashlib
+import hmac
 import re
+import uuid
 from datetime import timedelta
 
-from jose import JWTError, jwt
-from passlib.context import CryptContext
+import bcrypt
+import jwt
+from argon2 import PasswordHasher
+from argon2.exceptions import InvalidHashError, VerificationError
 
 from app.core.config import settings
 from app.core.timeutil import utcnow
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+TOKEN_ISSUER = "ai-hiring-platform"  # nosec B105
+_LEEWAY_SECONDS = 10  # tolerated clock drift between servers
 
-# bcrypt only looks at the first 72 BYTES of a password.
+_ph = PasswordHasher()  # argon2-cffi defaults = RFC 9106 "low memory" profile (Argon2id)
+
+# bcrypt only looks at the first 72 BYTES of a password (legacy hashes only).
 _BCRYPT_MAX_BYTES = 72
 
 
-def _prep(password: str) -> bytes:
+def _bcrypt_prep(password: str) -> bytes:
     return password.encode("utf-8")[:_BCRYPT_MAX_BYTES]
 
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(_prep(password))
+    return _ph.hash(password)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    try:
-        return pwd_context.verify(_prep(plain_password), hashed_password)
-    except ValueError:
+    if not hashed_password:
         return False
+    try:
+        if hashed_password.startswith("$argon2"):
+            return _ph.verify(hashed_password, plain_password)
+        if hashed_password.startswith(("$2a$", "$2b$", "$2y$")):
+            return bcrypt.checkpw(_bcrypt_prep(plain_password), hashed_password.encode("utf-8"))
+    except (VerificationError, InvalidHashError, ValueError):
+        return False
+    return False
 
 
-# A real bcrypt hash used to burn the same CPU time when the email is unknown,
+def password_needs_rehash(hashed_password: str) -> bool:
+    """True for legacy bcrypt hashes and for Argon2 hashes made with outdated parameters."""
+    if not hashed_password.startswith("$argon2"):
+        return True
+    try:
+        return _ph.check_needs_rehash(hashed_password)
+    except InvalidHashError:
+        return True
+
+
+# A real hash used to burn the same CPU time when the email is unknown,
 # so response time does not reveal which emails are registered.
 DUMMY_PASSWORD_HASH = hash_password("not-a-real-password-for-timing-only")
 
@@ -37,6 +76,22 @@ DUMMY_PASSWORD_HASH = hash_password("not-a-real-password-for-timing-only")
 def hash_token(token: str) -> str:
     """SHA-256 of a high-entropy token (reset links). Stored instead of the token."""
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def password_fingerprint(password_hash: str) -> str:
+    """Short, non-reversible tag of the current password hash (goes into the JWT as ``pwv``)."""
+    return hashlib.sha256(("pwv:" + password_hash).encode("utf-8")).hexdigest()[:16]
+
+
+# Passwords that pass the character rules but are in every cracking list.
+_COMMON_PASSWORDS = {
+    "password1", "password12", "password123", "password1!", "passw0rd", "p@ssw0rd", "p@ssword1",
+    "qwerty123", "qwerty1234", "qwertyuiop1", "qwerty12345", "abc12345", "abcd1234", "abcd12345",
+    "welcome1", "welcome123", "welcome12", "letmein123", "iloveyou1", "iloveyou123", "admin123",
+    "admin1234", "administrator1", "changeme1", "changeme123", "monkey123", "dragon123", "football1",
+    "football123", "baseball1", "superman1", "trustno1", "sunshine1", "princess1", "123456789a",
+    "1q2w3e4r5t", "1qaz2wsx", "zaq12wsx", "kenya2020", "kenya2024", "kenya2025", "nairobi123",
+}
 
 
 def password_problems(password: str) -> list[str]:
@@ -52,6 +107,8 @@ def password_problems(password: str) -> list[str]:
         problems.append("one lowercase letter")
     if not re.search(r"\d", password):
         problems.append("one number")
+    if not problems and password.lower() in _COMMON_PASSWORDS:
+        problems.append("to not be a commonly used password")
     return problems
 
 
@@ -66,14 +123,28 @@ def create_access_token(data: dict) -> str:
     to_encode = data.copy()
     now = utcnow()
     to_encode.update({
+        "iss": TOKEN_ISSUER,
+        "jti": uuid.uuid4().hex,
         "iat": now,
         "exp": now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
     })
-    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    return jwt.encode(to_encode, settings.SECRET_KEY.get_secret_value(), algorithm=settings.ALGORITHM)
 
 
 def decode_token(token: str):
+    """Return the verified claims, or None for anything wrong (bad signature, expired, wrong issuer...)."""
     try:
-        return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-    except JWTError:
+        return jwt.decode(
+            token,
+            settings.SECRET_KEY.get_secret_value(),
+            algorithms=[settings.ALGORITHM],  # never trust the token's own "alg" header
+            issuer=TOKEN_ISSUER,
+            leeway=_LEEWAY_SECONDS,
+            options={"require": ["exp", "iat", "iss"]},
+        )
+    except jwt.PyJWTError:
         return None
+
+
+def password_fingerprint_matches(claim: object, password_hash: str) -> bool:
+    return isinstance(claim, str) and hmac.compare_digest(claim, password_fingerprint(password_hash))

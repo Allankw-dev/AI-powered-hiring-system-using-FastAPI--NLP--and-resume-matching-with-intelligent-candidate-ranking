@@ -1,4 +1,6 @@
 """Import every model so Base.metadata knows about all tables."""
+__all__ = ["User", "Job", "Resume", "Application", "EmailLog"]
+
 from .user import User  # noqa: F401
 from .job import Job  # noqa: F401
 from .resume import Resume  # noqa: F401

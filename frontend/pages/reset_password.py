@@ -123,21 +123,6 @@ def render():
         </div>
         """, unsafe_allow_html=True)
 
-        if not token:
-            st.markdown("""
-            <div class="reset-card">
-                <div class="corner-tl"></div><div class="corner-tr"></div>
-                <div class="corner-bl"></div><div class="corner-br"></div>
-                <div class="reset-icon">⚠️</div>
-                <div class="reset-title">INVALID LINK</div>
-                <div class="reset-subtitle">// reset token is missing or expired</div>
-            </div>
-            """, unsafe_allow_html=True)
-            if st.button("🔁 Request New Reset Link", use_container_width=True):
-                st.session_state.page = "Forgot Password"
-                st.rerun()
-            return
-
         # Check if already reset successfully
         if st.session_state.get("password_reset_success"):
             st.markdown("""
@@ -150,6 +135,21 @@ def render():
             if st.button("🔐 Go to Login", use_container_width=True):
                 st.session_state.password_reset_success = False
                 st.session_state.page = "Login"
+                st.rerun()
+            return
+
+        if not token:
+            st.markdown("""
+            <div class="reset-card">
+                <div class="corner-tl"></div><div class="corner-tr"></div>
+                <div class="corner-bl"></div><div class="corner-br"></div>
+                <div class="reset-icon">⚠️</div>
+                <div class="reset-title">INVALID LINK</div>
+                <div class="reset-subtitle">// reset token is missing or expired</div>
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button("🔁 Request New Reset Link", use_container_width=True):
+                st.session_state.page = "Forgot Password"
                 st.rerun()
             return
 
@@ -180,6 +180,7 @@ def render():
 
                 if response.status_code == 200:
                     st.session_state.password_reset_success = True
+                    st.query_params.clear()  # the one-time token must not stay in the address bar / history
                     st.balloons()
                     st.rerun()
                 else:

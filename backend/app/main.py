@@ -5,15 +5,20 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from app.core.config import settings
 from app.core.limiter import limiter
+from app.core.middleware import BodySizeLimitMiddleware, SecurityHeadersMiddleware, error_headers
 from app.routers import admin, applications, auth, chat, jobs, password_reset, resumes, users
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger("app")
+# These libraries log full request URLs at INFO level; keep them quiet.
+for _noisy in ("httpx", "httpcore", "multipart"):
+    logging.getLogger(_noisy).setLevel(logging.WARNING)
 
 
 @asynccontextmanager
@@ -26,7 +31,18 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="AI Hiring Platform", version="1.1.0", lifespan=lifespan)
+# debug is explicitly off (it would put stack traces in HTTP responses), and the
+# interactive docs / schema are only served when ENABLE_DOCS is on (default: not in production).
+_docs = settings.docs_enabled
+app = FastAPI(
+    title="AI Hiring Platform",
+    version="1.2.0",
+    lifespan=lifespan,
+    debug=False,
+    docs_url="/docs" if _docs else None,
+    redoc_url=None,
+    openapi_url="/openapi.json" if _docs else None,
+)
 
 # ── Rate limiting ──
 app.state.limiter = limiter
@@ -45,32 +61,44 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
 async def unhandled_error_handler(request: Request, exc: Exception):
     # Details go to the server log, never to the client.
     logger.exception("Unhandled error on %s %s", request.method, request.url.path)
-    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+    # ServerErrorMiddleware runs outside our middleware, so add the headers here too.
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"}, headers=error_headers())
 
 
 app.add_middleware(SlowAPIMiddleware)
 
 # ── CORS ──
 # The API uses bearer tokens (no cookies), so credentials are never needed.
-# Restrict with CORS_ORIGINS="https://your-app.streamlit.app" if you want to.
+# By default only the Streamlit frontend (FRONTEND_URL) may call us from a browser.
+# Add more with CORS_ORIGINS="https://a.example,https://b.example".
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
     allow_credentials=False,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
+    max_age=600,
 )
+
+# Optional Host-header allow-list (set ALLOWED_HOSTS=api.example.com to turn on).
+if settings.allowed_host_list:
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_host_list)
+
+# Added last = runs first: oversized bodies are refused before anything else sees them,
+# and every response (including errors and CORS preflights) gets the security headers.
+app.add_middleware(BodySizeLimitMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
 
 # ── Routers ──
 for module in (auth, jobs, resumes, applications, admin, users, password_reset, chat):
     app.include_router(module.router)
 
 
-@app.api_route("/", methods=["GET", "HEAD"])
+@app.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
 def home():
     return {"message": "AI Hiring Platform API is running"}
 
 
-@app.api_route("/health", methods=["GET", "HEAD"])
+@app.api_route("/health", methods=["GET", "HEAD"], include_in_schema=False)
 def health():
     return {"status": "ok"}

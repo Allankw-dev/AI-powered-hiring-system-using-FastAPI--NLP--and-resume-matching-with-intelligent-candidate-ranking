@@ -1,12 +1,13 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
+from app.core.sanitize import clean_line
 from app.core.security import validate_password_strength
 
 
 class SignupRequest(BaseModel):
-    full_name: str
+    full_name: str = Field(max_length=300)
     email: EmailStr
-    password: str
+    password: str = Field(max_length=256)
     # No longer collected (not used for scoring, and a hiring tool should not
     # need it). Old clients may still send it - it is accepted and ignored.
     sex: str | None = Field(default=None, exclude=True)
@@ -19,7 +20,7 @@ class SignupRequest(BaseModel):
     @field_validator("full_name")
     @classmethod
     def name_valid(cls, v: str) -> str:
-        v = v.strip()
+        v = clean_line(v)  # no HTML, no control characters, single line
         if len(v) < 2:
             raise ValueError("Full name must be at least 2 characters")
         if len(v) > 255:
@@ -46,7 +47,7 @@ class LoginRequest(BaseModel):
 
 class AdminOTPVerifyRequest(BaseModel):
     email: EmailStr
-    otp_code: str = Field(min_length=1, max_length=10)
+    otp_code: str = Field(min_length=1, max_length=10, pattern=r"^\s*\d{4,10}\s*$")
 
     @field_validator("email")
     @classmethod

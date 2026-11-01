@@ -1,7 +1,7 @@
 import streamlit as st
-import streamlit.components.v1 as components
 
 from api import API_BASE_URL
+from safe import esc
 import chat_widget
 
 from pages import home
@@ -321,12 +321,12 @@ st.markdown('<div class="neon-divider"></div>', unsafe_allow_html=True)
 if is_logged_in() and st.session_state.user_email:
     if is_admin():
         st.markdown(
-            f'<div class="status-box status-admin">🛡️ Logged in as Admin • {st.session_state.user_email}</div>',
+            f'<div class="status-box status-admin">🛡️ Logged in as Admin • {esc(st.session_state.user_email)}</div>',
             unsafe_allow_html=True
         )
     elif is_candidate():
         st.markdown(
-            f'<div class="status-box status-candidate">👤 Logged in as Candidate • {st.session_state.user_email}</div>',
+            f'<div class="status-box status-candidate">👤 Logged in as Candidate • {esc(st.session_state.user_email)}</div>',
             unsafe_allow_html=True
         )
 

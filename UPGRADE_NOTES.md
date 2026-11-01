@@ -1,5 +1,30 @@
 # Upgrade notes
 
+## Security hardening release (read SECURITY_AUDIT.md first)
+
+**Before deploying**
+1. Rotate every credential that was ever committed (database passwords, `SECRET_KEY`, API keys) and clean git history. Steps are in SECURITY_AUDIT.md section 1.
+2. `SECRET_KEY` must now be **at least 32 characters** in production, or the API refuses to start. Run `python -m scripts.check_env` with your production variables first.
+3. Render start command: add `--no-server-header`.
+4. Supabase: run `python -m scripts.enable_rls --apply` once.
+
+**What users will notice**
+| Change | Effect |
+|---|---|
+| Tokens are bound to the password | Everyone is signed out once after the deploy. Changing or resetting a password signs out all other devices. |
+| Argon2id passwords | Nothing to do. Old bcrypt hashes keep working and are upgraded on that user's next login. |
+| Login lock-out | 5 wrong passwords from one IP for one account = 15 minute lock for that IP. (Configurable.) |
+| CORS default | Only `FRONTEND_URL` may call the API from a browser. If the chat bubble breaks, set `CORS_ORIGINS` to the exact Streamlit URL. |
+| `/docs` | Off in production. Set `ENABLE_DOCS=true` to bring it back. |
+| Names, job text, email subjects | HTML and control characters are stripped on input. |
+| Profile picture | `GET /users/me/picture` (own picture only). `profile_picture` (a server path) is no longer returned; `has_profile_picture` is. |
+
+No database migration is required.
+
+---
+
+# Previous release notes
+
 ## Do these BEFORE deploying
 
 1. **Rotate the leaked database passwords.** The Render Postgres URL (commits `0d8eb7f`, `83c7722`) and the Supabase URL (`a0c8204`, `c8a8031`) are still in git history. Reset the Supabase DB password (Project Settings → Database) and update `DATABASE_URL` on Render; delete the old Render database if unused.

@@ -1,0 +1,16 @@
+# Streamlit hardening. (Streamlit Cloud reads this file from the repo root.)
+[server]
+enableXsrfProtection = true
+enableCORS = true
+maxUploadSize = 5          # MB - matches the backend's MAX_UPLOAD_MB
+headless = true
+
+[client]
+showErrorDetails = "none"  # visitors never see Python stack traces
+toolbarMode = "viewer"     # hides developer menu items from visitors
+
+[browser]
+gatherUsageStats = false
+
+[logger]
+level = "warning"

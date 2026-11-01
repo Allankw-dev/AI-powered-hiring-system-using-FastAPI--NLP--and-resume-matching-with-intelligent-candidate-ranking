@@ -1,4 +1,5 @@
 import streamlit as st
+from safe import esc_stored
 from api import list_jobs, apply_to_job, my_resumes
 
 
@@ -180,7 +181,7 @@ def render():
             with col:
                 skills = job.get("required_skills", "")
                 skill_chips = "".join(
-                    f'<span class="skill">{s.strip()}</span>'
+                    f'<span class="skill">{esc_stored(s.strip())}</span>'
                     for s in skills.split(",") if s.strip()
                 ) if skills else '<span class="skill">Not specified</span>'
 
@@ -188,14 +189,14 @@ def render():
                 <div class="job-card">
                     <div class="card-top">
                         <div class="card-badge">// Position</div>
-                        <div class="job-title">{job["title"]}</div>
+                        <div class="job-title">{esc_stored(job["title"])}</div>
                         <div class="job-company">
                             <div class="company-dot"></div>
-                            {job.get("company", "Unknown")}
+                            {esc_stored(job.get("company", "Unknown"))}
                         </div>
                     </div>
                     <div class="card-body">
-                        <div class="job-desc">{job.get("description", "No description provided.")}</div>
+                        <div class="job-desc">{esc_stored(job.get("description", "No description provided."))}</div>
                         <div class="skills-row">{skill_chips}</div>
                         <div class="exp-tag">Min experience: <span>{job.get("min_experience", 0)} yrs</span></div>
                     </div>

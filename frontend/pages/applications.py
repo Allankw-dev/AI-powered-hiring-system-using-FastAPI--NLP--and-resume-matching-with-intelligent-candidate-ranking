@@ -152,17 +152,10 @@ def render():
             job_id = job_options[selected_job]
             resume_id = resume_options[selected_resume]
 
-            st.write("Selected Job ID:", job_id)
-            st.write("Selected Resume ID:", resume_id)
-
             response = apply_to_job(job_id, resume_id)
 
             if response.status_code in [200, 201]:
                 st.markdown('<div class="success-box">Application submitted successfully.</div>', unsafe_allow_html=True)
-                try:
-                    st.json(response.json())
-                except Exception:
-                    pass
                 st.rerun()
             else:
                 try:

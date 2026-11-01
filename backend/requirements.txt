@@ -1,17 +1,18 @@
-fastapi
-uvicorn[standard]
-sqlalchemy>=2.0
-psycopg2-binary
-python-jose[cryptography]
-passlib[bcrypt]
-bcrypt==4.0.1
-python-multipart
-email-validator
-pydantic>=2
-pydantic-settings>=2
-scikit-learn
-pdfplumber
-slowapi
-bleach
-python-dotenv
-httpx
+# Versions below are the ones the test-suite was run against. "~=X.Y" means
+# "X.Y or any newer compatible release of the same major version", so security
+# patches are picked up but a breaking major release is not.
+fastapi~=0.162
+uvicorn~=0.54
+sqlalchemy~=2.1
+psycopg2-binary~=2.9
+pydantic-settings~=2.16
+email-validator~=2.3
+python-multipart~=0.0.33
+PyJWT~=2.12
+argon2-cffi~=25.1
+bcrypt~=5.0
+slowapi~=0.1.10
+bleach~=6.4
+httpx~=0.28
+scikit-learn~=1.9
+pdfplumber~=0.11

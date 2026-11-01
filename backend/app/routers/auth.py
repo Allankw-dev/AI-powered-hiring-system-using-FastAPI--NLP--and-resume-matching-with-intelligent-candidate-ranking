@@ -6,12 +6,19 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.dep import get_db
-from app.core.limiter import limiter
-from app.core.security import DUMMY_PASSWORD_HASH, create_access_token, hash_password, verify_password
+from app.core.limiter import client_ip, limiter
+from app.core.security import (
+    DUMMY_PASSWORD_HASH,
+    create_access_token,
+    hash_password,
+    password_fingerprint,
+    password_needs_rehash,
+    verify_password,
+)
 from app.models.user import User
 from app.schemas.auth import AdminOTPVerifyRequest, LoginRequest, SignupRequest, TokenResponse
 from app.schemas.user import UserOut
-from app.services import otp_service
+from app.services import login_throttle, otp_service
 from app.services.email_service import EmailError, send_otp_email
 
 logger = logging.getLogger(__name__)
@@ -22,21 +29,52 @@ BAD_CREDENTIALS = "Invalid email or password"
 BAD_OTP = "Invalid or expired code"
 
 
-def _check_credentials(db: Session, email: str, password: str) -> User:
+def _mask(email: str) -> str:
+    name, _, domain = email.partition("@")
+    return f"{name[:2]}***@{domain}"
+
+
+def _check_credentials(request: Request, db: Session, email: str, password: str) -> User:
     """Constant-time-ish credential check (same work whether or not the email exists)."""
+    ip = client_ip(request)
+
+    locked_for = login_throttle.seconds_locked(email, ip)
+    if locked_for:
+        logger.warning("Login blocked (too many failures) for %s from %s", _mask(email), ip)
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Too many failed attempts. Try again in {max(1, locked_for // 60 + 1)} minute(s).",
+            headers={"Retry-After": str(locked_for)},
+        )
+
     user = db.query(User).filter(User.email == email).first()
     stored_hash = user.password_hash if user else DUMMY_PASSWORD_HASH
     password_ok = verify_password(password, stored_hash)
     if not user or not password_ok:
+        login_throttle.record_failure(email, ip)
+        logger.warning("Failed login for %s from %s", _mask(email), ip)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=BAD_CREDENTIALS)
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This account has been disabled")
+
+    login_throttle.record_success(email, ip)
+
+    # Upgrade old bcrypt hashes to Argon2id now that we briefly hold the real password.
+    if password_needs_rehash(user.password_hash):
+        user.password_hash = hash_password(password)
+        db.commit()
+        logger.info("Upgraded the password hash of user %s to Argon2id", user.id)
     return user
 
 
 def _token_for(user: User) -> dict:
-    token = create_access_token({"user_id": user.id, "email": user.email, "role": user.role})
-    return {"access_token": token, "token_type": "bearer", "role": user.role}
+    token = create_access_token({
+        "user_id": user.id,
+        "email": user.email,
+        "role": user.role,
+        "pwv": password_fingerprint(user.password_hash),  # token dies when the password changes
+    })
+    return {"access_token": token, "token_type": "bearer", "role": user.role}  # nosec B105
 
 
 @router.post("/signup", response_model=UserOut)
@@ -67,7 +105,7 @@ def signup(request: Request, payload: SignupRequest, db: Session = Depends(get_d
 @router.post("/login", response_model=TokenResponse)
 @limiter.limit("5/minute")
 def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)):
-    user = _check_credentials(db, payload.email, payload.password)
+    user = _check_credentials(request, db, payload.email, payload.password)
 
     # A password alone must never be enough for an admin.
     if user.role == "admin":
@@ -79,7 +117,7 @@ def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)
 @router.post("/admin/request-otp")
 @limiter.limit("3/minute")
 def admin_request_otp(request: Request, payload: LoginRequest, db: Session = Depends(get_db)):
-    user = _check_credentials(db, payload.email, payload.password)
+    user = _check_credentials(request, db, payload.email, payload.password)
     if user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
 
@@ -109,10 +147,12 @@ def admin_verify_otp(request: Request, payload: AdminOTPVerifyRequest, db: Sessi
         raise HTTPException(status_code=400, detail=BAD_OTP)
 
     if not otp_service.otp_matches(user, payload.otp_code):
+        logger.warning("Wrong admin code for %s from %s", _mask(user.email), client_ip(request))
         if otp_service.register_failure(user.email) >= otp_service.MAX_ATTEMPTS:
             otp_service.clear_otp(db, user)
             raise HTTPException(status_code=400, detail="Too many wrong codes. Request a new code.")
         raise HTTPException(status_code=400, detail=BAD_OTP)
 
     otp_service.clear_otp(db, user)
+    logger.info("Admin %s signed in with 2FA from %s", user.id, client_ip(request))
     return _token_for(user)

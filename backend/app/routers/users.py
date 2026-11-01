@@ -2,12 +2,15 @@ import logging
 import os
 import uuid
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-from pydantic import BaseModel, EmailStr, field_validator
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+from fastapi.responses import FileResponse
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.dep import get_current_user, get_db
+from app.core.limiter import limiter
+from app.core.sanitize import clean_line
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
@@ -20,13 +23,13 @@ _IMAGE_SIGNATURES = (
 
 
 class ProfileUpdateRequest(BaseModel):
-    full_name: str
+    full_name: str = Field(max_length=300)
     email: EmailStr
 
     @field_validator("full_name")
     @classmethod
     def name_valid(cls, v: str) -> str:
-        v = v.strip()
+        v = clean_line(v)  # no HTML, no control characters, single line
         if not 2 <= len(v) <= 255:
             raise ValueError("Full name must be between 2 and 255 characters")
         return v
@@ -43,7 +46,8 @@ def _profile(user: User) -> dict:
         "full_name": user.full_name,
         "email": user.email,
         "role": user.role,
-        "profile_picture": user.profile_picture,
+        # Never expose the server-side file path, only whether a picture exists.
+        "has_profile_picture": bool(user.profile_picture),
     }
 
 
@@ -53,7 +57,9 @@ def get_my_profile(current_user: User = Depends(get_current_user)):
 
 
 @router.put("/me")
+@limiter.limit("10/minute")
 def update_my_profile(
+    request: Request,
     payload: ProfileUpdateRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -70,7 +76,9 @@ def update_my_profile(
 
 
 @router.post("/me/upload-picture")
+@limiter.limit("6/minute")
 def upload_profile_picture(
+    request: Request,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -100,4 +108,16 @@ def upload_profile_picture(
         except OSError:
             logger.warning("Could not remove old profile picture")
 
-    return {"message": "Profile picture uploaded successfully", "path": file_path}
+    return {"message": "Profile picture uploaded successfully"}
+
+
+@router.get("/me/picture")
+@limiter.limit("60/minute")
+def get_my_picture(request: Request, current_user: User = Depends(get_current_user)):
+    """Streams the caller's OWN picture. There is no URL that serves anyone else's."""
+    path = current_user.profile_picture
+    upload_dir = os.path.realpath(os.path.join(settings.UPLOAD_DIR, "profile_pictures"))
+    if not path or os.path.dirname(os.path.realpath(path)) != upload_dir or not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="No profile picture")
+    media = "image/png" if path.lower().endswith(".png") else "image/jpeg"
+    return FileResponse(path, media_type=media, headers={"Cache-Control": "private, no-store"})

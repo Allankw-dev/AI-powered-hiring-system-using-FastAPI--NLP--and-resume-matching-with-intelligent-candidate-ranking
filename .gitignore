@@ -217,3 +217,19 @@ uploads/
 *.sqlite3
 .pytest_cache/
 node_modules/
+
+# ── Security: never commit these ──
+*.pem
+*.key
+*.p12
+*.pfx
+secrets.toml
+.streamlit/secrets.toml
+backend/.env
+backend/*.db
+backend/uploads/
+**/uploads/
+*.sqlite
+*.sql.gz
+*.dump
+*.bak

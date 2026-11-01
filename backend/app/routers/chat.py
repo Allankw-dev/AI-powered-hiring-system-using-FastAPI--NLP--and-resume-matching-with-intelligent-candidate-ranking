@@ -3,7 +3,7 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from app.core.limiter import limiter
+from app.core.limiter import client_ip, limiter
 from app.services.chat_service import ChatLimitReached, generate_reply
 
 router = APIRouter(tags=["Chat"])
@@ -19,11 +19,15 @@ class ChatMessage(BaseModel):
     history: list[ChatTurn] = Field(default_factory=list, max_length=12)
 
 
+# Public on purpose (visitors can ask before signing up), so it has three brakes:
+# 10 requests/minute per IP, a per-IP daily allowance, and a global daily cap.
 @router.post("/chat")
 @limiter.limit("10/minute")
 async def chat(request: Request, payload: ChatMessage):
     try:
-        reply = await generate_reply(payload.message.strip(), [t.model_dump() for t in payload.history])
+        reply = await generate_reply(
+            payload.message.strip(), [t.model_dump() for t in payload.history], visitor=client_ip(request)
+        )
     except ChatLimitReached:
         raise HTTPException(status_code=429, detail="Hira has reached today's chat limit. Please try again tomorrow.")
     return {"reply": reply}

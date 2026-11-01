@@ -1,0 +1,3 @@
+# Same idea as the backend: tested versions, patch/minor updates allowed, no surprise major jumps.
+streamlit>=1.40,<1.67   # capped at the tested line: newer releases are removing st.components.v1.html (see SECURITY_AUDIT.md)
+requests>=2.32,<3

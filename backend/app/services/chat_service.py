@@ -35,19 +35,30 @@ TROUBLE = "Sorry, I'm having trouble right now. Please try again!"
 
 _lock = threading.Lock()
 _usage = {"day": date.today(), "count": 0}
+_per_visitor: dict[str, int] = {}
+_MAX_TRACKED_VISITORS = 50_000
 
 
 class ChatLimitReached(Exception):
     pass
 
 
-def _take_daily_slot() -> None:
+def _take_daily_slot(visitor: str | None = None) -> None:
+    """Spend one chat call from the global daily cap and from this visitor's own allowance."""
     with _lock:
         today = date.today()
         if _usage["day"] != today:
             _usage["day"], _usage["count"] = today, 0
+            _per_visitor.clear()
         if _usage["count"] >= settings.CHAT_DAILY_LIMIT:
             raise ChatLimitReached
+        if visitor is not None:
+            used = _per_visitor.get(visitor, 0)
+            if used >= settings.CHAT_PER_IP_DAILY_LIMIT:
+                raise ChatLimitReached
+            if used == 0 and len(_per_visitor) >= _MAX_TRACKED_VISITORS:
+                raise ChatLimitReached  # table full of junk IPs: fail closed rather than grow forever
+            _per_visitor[visitor] = used + 1
         _usage["count"] += 1
 
 
@@ -98,7 +109,7 @@ async def _ask_claude(client: httpx.AsyncClient, message: str, history: list[dic
         client, "Claude",
         "https://api.anthropic.com/v1/messages",
         headers={
-            "x-api-key": settings.ANTHROPIC_API_KEY,
+            "x-api-key": settings.ANTHROPIC_API_KEY.get_secret_value(),
             "anthropic-version": "2023-06-01",
             "content-type": "application/json",
         },
@@ -118,7 +129,7 @@ async def _ask_gemini(client: httpx.AsyncClient, message: str, history: list[dic
     resp = await _post(
         client, "Gemini",
         f"https://generativelanguage.googleapis.com/v1beta/models/{settings.GEMINI_MODEL}:generateContent",
-        headers={"x-goog-api-key": settings.GEMINI_API_KEY, "content-type": "application/json"},
+        headers={"x-goog-api-key": settings.GEMINI_API_KEY.get_secret_value(), "content-type": "application/json"},
         json={
             "system_instruction": {"parts": [{"text": SYSTEM_PROMPT}]},
             "contents": contents,
@@ -129,7 +140,7 @@ async def _ask_gemini(client: httpx.AsyncClient, message: str, history: list[dic
     return resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
 
 
-async def generate_reply(message: str, history: list[dict]) -> str:
+async def generate_reply(message: str, history: list[dict], visitor: str | None = None) -> str:
     providers = []
     if settings.ANTHROPIC_API_KEY:
         providers.append(("Claude", _ask_claude))
@@ -138,7 +149,7 @@ async def generate_reply(message: str, history: list[dict]) -> str:
     if not providers:
         return UNAVAILABLE
 
-    _take_daily_slot()  # may raise ChatLimitReached
+    _take_daily_slot(visitor)  # may raise ChatLimitReached
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         for name, ask in providers:

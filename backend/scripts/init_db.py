@@ -3,8 +3,11 @@
     cd backend
     DATABASE_URL=postgresql://... python -m scripts.init_db
 """
+import importlib
+
 from app.core.database import Base, engine
-import app.models  # noqa: F401  (registers all tables)
+
+importlib.import_module("app.models")  # registers all tables on Base.metadata
 
 
 def main() -> None:

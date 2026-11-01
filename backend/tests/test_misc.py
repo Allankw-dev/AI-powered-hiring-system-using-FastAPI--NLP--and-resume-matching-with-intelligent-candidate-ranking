@@ -1,5 +1,5 @@
 import pytest
-from pydantic import ValidationError
+from pydantic import SecretStr, ValidationError
 
 from tests.conftest import PASSWORD, make_user
 
@@ -40,7 +40,11 @@ def test_chat_daily_cap(monkeypatch):
 
 def test_profile_picture_checks_real_file_type(client, candidate_headers):
     ok = client.post("/users/me/upload-picture", headers=candidate_headers, files={"file": ("a.png", PNG, "image/png")})
-    assert ok.status_code == 200 and ok.json()["path"].endswith(".png")
+    assert ok.status_code == 200 and "path" not in ok.json()  # server paths are never returned
+    me = client.get("/users/me", headers=candidate_headers).json()
+    assert me["has_profile_picture"] is True and "profile_picture" not in me
+    pic = client.get("/users/me/picture", headers=candidate_headers)
+    assert pic.status_code == 200 and pic.headers["content-type"] == "image/png" and pic.content == PNG
     bad = client.post("/users/me/upload-picture", headers=candidate_headers,
                       files={"file": ("a.png", b"<html><script>alert(1)</script>", "image/png")})
     assert bad.status_code == 400
@@ -57,9 +61,20 @@ def test_profile_update_and_duplicate_email(client, db, candidate_headers):
 
 
 def test_security_headers_cors_and_health(client):
-    r = client.get("/health", headers={"Origin": "https://x.streamlit.app"})
-    assert r.status_code == 200 and r.headers["access-control-allow-origin"] == "*"
+    r = client.get("/health", headers={"Origin": "https://ai-powered-hiring-system.streamlit.app"})
+    assert r.status_code == 200
+    # CORS: only our own frontend, never "*", never credentials
+    assert r.headers["access-control-allow-origin"] == "https://ai-powered-hiring-system.streamlit.app"
     assert "access-control-allow-credentials" not in r.headers
+    evil = client.get("/health", headers={"Origin": "https://evil.example"})
+    assert "access-control-allow-origin" not in evil.headers
+    # hardening headers on every response
+    assert r.headers["x-content-type-options"] == "nosniff"
+    assert r.headers["x-frame-options"] == "DENY"
+    assert r.headers["referrer-policy"] == "no-referrer"
+    assert "frame-ancestors 'none'" in r.headers["content-security-policy"]
+    assert r.headers["cache-control"] == "no-store"
+    assert "server" not in r.headers
 
 
 def test_client_ip_trusts_only_the_proxy_added_entry(monkeypatch):
@@ -75,8 +90,10 @@ def test_settings_refuse_weak_secret_in_production(monkeypatch):
         Settings(ENVIRONMENT="production", SECRET_KEY="fallback-local-key-only", DATABASE_URL="sqlite://")
     with pytest.raises(ValidationError):
         Settings(ENVIRONMENT="production", SECRET_KEY="", DATABASE_URL="sqlite://")
+    with pytest.raises(ValidationError):  # too short for production
+        Settings(ENVIRONMENT="production", SECRET_KEY="short-but-not-weak", DATABASE_URL="sqlite://")
     s = Settings(ENVIRONMENT="production", SECRET_KEY="x" * 40, DATABASE_URL="postgres://u:p@h/db")
-    assert s.DATABASE_URL == "postgresql+psycopg2://u:p@h/db"
+    assert s.DATABASE_URL.get_secret_value() == "postgresql+psycopg2://u:p@h/db"
 
 
 @pytest.mark.parametrize("given,expected", [
@@ -88,25 +105,29 @@ def test_settings_refuse_weak_secret_in_production(monkeypatch):
 ])
 def test_database_url_driver_is_explicit(given, expected):
     from app.core.config import Settings
-    assert Settings(ENVIRONMENT="test", SECRET_KEY="x" * 40, DATABASE_URL=given).DATABASE_URL == expected
+    assert Settings(ENVIRONMENT="test", SECRET_KEY="x" * 40, DATABASE_URL=given).DATABASE_URL.get_secret_value() == expected
 
 
 def test_normalised_postgres_url_builds_a_psycopg2_engine():
     from sqlalchemy import create_engine
     from app.core.config import Settings
-    url = Settings(ENVIRONMENT="test", SECRET_KEY="x" * 40, DATABASE_URL="postgresql://u:p@h:5432/db").DATABASE_URL
+    url = Settings(ENVIRONMENT="test", SECRET_KEY="x" * 40, DATABASE_URL="postgresql://u:p@h:5432/db").DATABASE_URL.get_secret_value()
     assert create_engine(url).dialect.driver == "psycopg2"  # no connection is made
 
 
-def test_password_hashing_matches_legacy_truncation():
-    from app.core.security import hash_password, verify_password
+def test_new_hashes_are_argon2_and_legacy_bcrypt_hashes_still_verify():
+    import bcrypt
+    from app.core.security import hash_password, password_needs_rehash, verify_password
     long_pw = "Aa1" + "é" * 60
-    assert verify_password(long_pw, hash_password(long_pw))
-    assert not verify_password("Wrong1Pass", hash_password(long_pw))
-    # a hash made the OLD way (str[:72]) must still verify
-    from passlib.context import CryptContext
-    old = CryptContext(schemes=["bcrypt"]).hash(long_pw[:72])
-    assert verify_password(long_pw, old)
+    new = hash_password(long_pw)
+    assert new.startswith("$argon2id$") and verify_password(long_pw, new)
+    assert not verify_password("Wrong1Pass", new) and not password_needs_rehash(new)
+    # Argon2 uses the WHOLE password (bcrypt would ignore everything after 72 bytes)
+    assert not verify_password(long_pw + "tail", new)
+    # a hash made the OLD way (bcrypt over the first 72 bytes) must still verify, and be flagged for upgrade
+    old = bcrypt.hashpw(long_pw.encode()[:72], bcrypt.gensalt(4)).decode()
+    assert verify_password(long_pw, old) and password_needs_rehash(old)
+    assert not verify_password("x", "") and not verify_password("x", "not-a-hash")
 
 
 # ── chat providers: verify what actually goes over the wire ──
@@ -127,8 +148,8 @@ def test_claude_is_used_first_and_key_is_in_a_header(client, monkeypatch):
         seen["url"], seen["headers"], seen["body"] = str(request.url), request.headers, request.read()
         return httpx.Response(200, json={"content": [{"type": "text", "text": "Hi from Claude"}]})
 
-    monkeypatch.setattr(chat_service.settings, "ANTHROPIC_API_KEY", "sk-ant-test")
-    monkeypatch.setattr(chat_service.settings, "GEMINI_API_KEY", "gem-test")
+    monkeypatch.setattr(chat_service.settings, "ANTHROPIC_API_KEY", SecretStr("sk-ant-test"))
+    monkeypatch.setattr(chat_service.settings, "GEMINI_API_KEY", SecretStr("gem-test"))
     _mock_httpx(monkeypatch, handler)
     chat_service._usage["count"] = 0
 
@@ -148,8 +169,8 @@ def test_gemini_fallback_key_not_in_url(client, monkeypatch):
         seen["url"], seen["key"] = str(request.url), request.headers.get("x-goog-api-key")
         return httpx.Response(200, json={"candidates": [{"content": {"parts": [{"text": "Hi from Gemini"}]}}]})
 
-    monkeypatch.setattr(chat_service.settings, "ANTHROPIC_API_KEY", "")
-    monkeypatch.setattr(chat_service.settings, "GEMINI_API_KEY", "gem-test")
+    monkeypatch.setattr(chat_service.settings, "ANTHROPIC_API_KEY", SecretStr(""))
+    monkeypatch.setattr(chat_service.settings, "GEMINI_API_KEY", SecretStr("gem-test"))
     _mock_httpx(monkeypatch, handler)
     chat_service._usage["count"] = 0
 
@@ -160,7 +181,7 @@ def test_gemini_fallback_key_not_in_url(client, monkeypatch):
 def test_provider_failure_returns_friendly_message(client, monkeypatch):
     import httpx
     from app.services import chat_service
-    monkeypatch.setattr(chat_service.settings, "ANTHROPIC_API_KEY", "sk-ant-test")
+    monkeypatch.setattr(chat_service.settings, "ANTHROPIC_API_KEY", SecretStr("sk-ant-test"))
     _mock_httpx(monkeypatch, lambda request: httpx.Response(500, json={"error": "boom"}))
     chat_service._usage["count"] = 0
     r = client.post("/chat", json={"message": "hello"})
@@ -176,8 +197,8 @@ def test_claude_failure_falls_back_to_gemini_and_logs_the_reason(client, monkeyp
             return httpx.Response(400, json={"error": {"message": "Your credit balance is too low"}})
         return httpx.Response(200, json={"candidates": [{"content": {"parts": [{"text": "Gemini to the rescue"}]}}]})
 
-    monkeypatch.setattr(chat_service.settings, "ANTHROPIC_API_KEY", "sk-ant-secret")
-    monkeypatch.setattr(chat_service.settings, "GEMINI_API_KEY", "gem-secret")
+    monkeypatch.setattr(chat_service.settings, "ANTHROPIC_API_KEY", SecretStr("sk-ant-secret"))
+    monkeypatch.setattr(chat_service.settings, "GEMINI_API_KEY", SecretStr("gem-secret"))
     _mock_httpx(monkeypatch, handler)
     chat_service._usage["count"] = 0
 
@@ -208,8 +229,8 @@ def test_gemini_overload_is_retried_then_succeeds(client, monkeypatch):
             return httpx.Response(503, json={"error": {"status": "UNAVAILABLE"}})
         return httpx.Response(200, json={"candidates": [{"content": {"parts": [{"text": "Finally!"}]}}]})
 
-    monkeypatch.setattr(chat_service.settings, "ANTHROPIC_API_KEY", "")
-    monkeypatch.setattr(chat_service.settings, "GEMINI_API_KEY", "gem-test")
+    monkeypatch.setattr(chat_service.settings, "ANTHROPIC_API_KEY", SecretStr(""))
+    monkeypatch.setattr(chat_service.settings, "GEMINI_API_KEY", SecretStr("gem-test"))
     _mock_httpx(monkeypatch, handler); _no_sleep(monkeypatch)
     chat_service._usage["count"] = 0
 
@@ -221,8 +242,8 @@ def test_persistent_overload_gives_friendly_message_after_three_tries(client, mo
     import httpx
     from app.services import chat_service
     calls = []
-    monkeypatch.setattr(chat_service.settings, "ANTHROPIC_API_KEY", "")
-    monkeypatch.setattr(chat_service.settings, "GEMINI_API_KEY", "gem-test")
+    monkeypatch.setattr(chat_service.settings, "ANTHROPIC_API_KEY", SecretStr(""))
+    monkeypatch.setattr(chat_service.settings, "GEMINI_API_KEY", SecretStr("gem-test"))
     _mock_httpx(monkeypatch, lambda r: (calls.append(1), httpx.Response(503, json={}))[1]); _no_sleep(monkeypatch)
     chat_service._usage["count"] = 0
 
@@ -234,8 +255,8 @@ def test_real_errors_are_not_retried(client, monkeypatch):
     import httpx
     from app.services import chat_service
     calls = []
-    monkeypatch.setattr(chat_service.settings, "ANTHROPIC_API_KEY", "sk-ant-test")
-    monkeypatch.setattr(chat_service.settings, "GEMINI_API_KEY", "")
+    monkeypatch.setattr(chat_service.settings, "ANTHROPIC_API_KEY", SecretStr("sk-ant-test"))
+    monkeypatch.setattr(chat_service.settings, "GEMINI_API_KEY", SecretStr(""))
     _mock_httpx(monkeypatch, lambda r: (calls.append(1), httpx.Response(400, json={"error": "credits"}))[1]); _no_sleep(monkeypatch)
     chat_service._usage["count"] = 0
 

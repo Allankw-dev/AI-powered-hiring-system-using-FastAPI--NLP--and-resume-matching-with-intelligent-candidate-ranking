@@ -8,6 +8,7 @@ Raises EmailError when nothing is configured or sending fails.
 import html
 import logging
 import smtplib
+import ssl
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -36,7 +37,7 @@ def _send_resend(to: str, subject: str, html_body: str) -> None:
     try:
         resp = httpx.post(
             "https://api.resend.com/emails",
-            headers={"Authorization": f"Bearer {settings.RESEND_API_KEY}"},
+            headers={"Authorization": f"Bearer {settings.RESEND_API_KEY.get_secret_value()}"},
             json={"from": _from_address(), "to": [to], "subject": subject, "html": html_body},
             timeout=15.0,
         )
@@ -48,19 +49,22 @@ def _send_resend(to: str, subject: str, html_body: str) -> None:
 
 def _send_smtp(to: str, subject: str, html_body: str) -> None:
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
+    msg["Subject"] = " ".join(subject.split())  # a line break here would let an attacker add headers
     msg["From"] = _from_address()
     msg["To"] = to
     msg.attach(MIMEText(html_body, "html"))
+    # Python's default SMTP TLS context does NOT verify the server certificate,
+    # which would let someone on the network read the SMTP password.
+    tls = ssl.create_default_context()
     try:
         if settings.SMTP_PORT == 465:
-            server = smtplib.SMTP_SSL(settings.SMTP_SERVER, settings.SMTP_PORT, timeout=15)
+            server = smtplib.SMTP_SSL(settings.SMTP_SERVER, settings.SMTP_PORT, timeout=15, context=tls)
         else:
             server = smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT, timeout=15)
             server.ehlo()
-            server.starttls()
+            server.starttls(context=tls)
         with server:
-            server.login(settings.ADMIN_EMAIL, settings.ADMIN_EMAIL_PASSWORD)
+            server.login(settings.ADMIN_EMAIL, settings.ADMIN_EMAIL_PASSWORD.get_secret_value())
             server.sendmail(settings.ADMIN_EMAIL, to, msg.as_string())
     except (smtplib.SMTPException, OSError) as exc:
         raise EmailError(f"SMTP send failed: {exc.__class__.__name__}") from exc

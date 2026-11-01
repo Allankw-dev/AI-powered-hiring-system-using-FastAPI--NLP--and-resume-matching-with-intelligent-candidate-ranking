@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
@@ -12,7 +14,11 @@ from app.schemas.admin import CandidateEmailRequest
 from app.services.email_service import send_admin_email
 from app.services.ranking import apply_scores, loads_list, refresh_rankings, score_application
 
-router = APIRouter(prefix="/admin", tags=["Admin"])
+logger = logging.getLogger(__name__)
+
+# Every route in this router needs an admin. Declaring it on the router (not only
+# on each function) means a route added later can never be left open by mistake.
+router = APIRouter(prefix="/admin", tags=["Admin"], dependencies=[Depends(require_admin)])
 
 
 @router.get("/top-candidates")
@@ -56,12 +62,13 @@ def top_candidates(
     ]
 
 
-def _set_status(db: Session, application_id: int, new_status: str) -> None:
+def _set_status(db: Session, application_id: int, new_status: str, admin_id: int) -> None:
     application = db.query(Application).filter(Application.id == application_id).first()
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")
     application.status = new_status
     db.commit()
+    logger.info("AUDIT admin=%s set application=%s to %s", admin_id, application_id, new_status)
 
 
 @router.post("/applications/{application_id}/shortlist")
@@ -69,7 +76,7 @@ def _set_status(db: Session, application_id: int, new_status: str) -> None:
 def shortlist_candidate(
     request: Request, application_id: int, db: Session = Depends(get_db), current_user=Depends(require_admin)
 ):
-    _set_status(db, application_id, "shortlisted")
+    _set_status(db, application_id, "shortlisted", current_user.id)
     return {"message": "Candidate shortlisted successfully"}
 
 
@@ -78,7 +85,7 @@ def shortlist_candidate(
 def reject_candidate(
     request: Request, application_id: int, db: Session = Depends(get_db), current_user=Depends(require_admin)
 ):
-    _set_status(db, application_id, "rejected")
+    _set_status(db, application_id, "rejected", current_user.id)
     return {"message": "Candidate rejected successfully"}
 
 
@@ -114,6 +121,7 @@ def send_email_to_candidate(
         sent_by=current_user.id,
     ))
     db.commit()
+    logger.info("AUDIT admin=%s emailed application=%s", current_user.id, application.id)
 
     return {"message": f"Email queued for {user.email}"}
 
@@ -140,10 +148,12 @@ def rescore_job_applications(
     db.flush()
     refresh_rankings(db, job_id)
     db.commit()
+    logger.info("AUDIT admin=%s re-scored job=%s (%s applications)", current_user.id, job_id, rescored)
     return {"message": f"Re-scored {rescored} application(s)", "rescored": rescored}
 
 
 @router.get("/client-ip")
+@limiter.limit("10/minute")
 def debug_client_ip(request: Request, current_user=Depends(require_admin)):
     """Shows which IP the rate limiter sees. If every visitor shows the same
     address, raise TRUSTED_PROXY_HOPS (e.g. to 2)."""

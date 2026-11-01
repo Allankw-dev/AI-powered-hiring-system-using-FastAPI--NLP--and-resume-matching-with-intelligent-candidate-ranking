@@ -36,7 +36,10 @@ Applications are ranked per job (`ranking_position`). Admins can re-score a job'
 Floating chat bubble powered by **Claude** (set `ANTHROPIC_API_KEY`) or **Gemini** as a fallback (`GEMINI_API_KEY`). It has no access to anyone's account or data, is rate limited, and has a daily cap.
 
 ### 🔐 Security
-- JWT auth + bcrypt; password strength enforced on signup **and** reset
+- JWT auth (PyJWT, tokens die when the password changes) + **Argon2id** password hashes (old bcrypt hashes upgrade on next login); strength and common-password checks on signup **and** reset
+- Login lock-out after repeated wrong passwords, per-route rate limits, per-visitor chat allowance
+- Strict CORS (only your frontend), security headers, request-size limits, `/docs` off in production
+- All secrets are `SecretStr` (never printed); TLS enforced to the database; see **[SECURITY_AUDIT.md](SECURITY_AUDIT.md)**
 - Admin 2FA is mandatory — a password alone never yields an admin token; OTPs expire in 5 minutes and die after 5 wrong guesses
 - Self-service signup can only create candidates; admins are managed with `scripts/manage_admin.py`
 - Password-reset tokens are stored hashed, single-use, 1 hour
@@ -48,7 +51,7 @@ Floating chat bubble powered by **Claude** (set `ANTHROPIC_API_KEY`) or **Gemini
 ---
 
 ## 🛠️ Tech stack
-**Backend:** FastAPI · SQLAlchemy · PostgreSQL (Supabase) · pdfplumber · scikit-learn · passlib/bcrypt · python-jose · slowapi · bleach · httpx
+**Backend:** FastAPI · SQLAlchemy · PostgreSQL (Supabase) · pdfplumber · scikit-learn · argon2-cffi/bcrypt · PyJWT · slowapi · bleach · httpx
 **Frontend:** Streamlit · requests
 **Infra:** Render (API) · Streamlit Cloud (UI) · Supabase (DB) · Resend or Gmail SMTP (email)
 
@@ -77,7 +80,7 @@ For local development set `ENVIRONMENT=development` in `.env`; with `OTP_DELIVER
 ### 2. Frontend
 ```bash
 cd frontend
-pip install streamlit requests
+pip install -r requirements.txt
 ```
 `.streamlit/secrets.toml`:
 ```toml
@@ -105,7 +108,9 @@ cd backend && pip install -r requirements-dev.txt && python -m pytest
 | `ADMIN_EMAIL` + `ADMIN_EMAIL_PASSWORD` | the two | Gmail SMTP fallback |
 | `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` | optional | Chat assistant (Claude first) |
 | `FRONTEND_URL` | optional | Used in password-reset links |
-| `CORS_ORIGINS` | optional | `*` (default) or a comma-separated list |
+| `CORS_ORIGINS` | optional | Empty (default) = only `FRONTEND_URL`. Or a comma-separated list |
+| `ENABLE_DOCS` | optional | `true` to expose `/docs` (off in production by default) |
+| `LOGIN_MAX_FAILURES`, `CHAT_PER_IP_DAILY_LIMIT`, `DB_SSLMODE`, `ALLOWED_HOSTS` | optional | See `.env.example` |
 | `OTP_DELIVERY` | optional | `email` (default) or `log` |
 | `TRUSTED_PROXY_HOPS` | optional | Proxies in front of the API (default 1) |
 | `MAX_UPLOAD_MB`, `CHAT_DAILY_LIMIT`, `ENVIRONMENT` | optional | See `.env.example` |
@@ -122,10 +127,10 @@ cd backend && pip install -r requirements-dev.txt && python -m pytest
 | Resumes | `POST /resumes/upload` · `GET /resumes/my` · `DELETE /resumes/{id}` |
 | Applications | `POST /applications/` · `GET /applications/my` |
 | Admin | `GET /admin/top-candidates?job_id=&limit=` · `POST /admin/applications/{id}/shortlist` · `…/reject` · `POST /admin/send-email` · `POST /admin/jobs/{id}/rescore` · `GET /admin/client-ip` |
-| Users | `GET/PUT /users/me` · `POST /users/me/upload-picture` |
+| Users | `GET/PUT /users/me` · `POST /users/me/upload-picture` · `GET /users/me/picture` |
 | Utilities | `POST /chat` · `GET /health` |
 
-Interactive docs: `/docs`.
+Interactive docs: `/docs` (only when `ENVIRONMENT` is not `production`, or `ENABLE_DOCS=true`).
 
 ---
 
@@ -155,8 +160,9 @@ frontend/
 
 **Backend (Render)** — root `backend`, build `pip install -r requirements.txt`, start:
 ```
-uvicorn app.main:app --host 0.0.0.0 --port $PORT
+uvicorn app.main:app --host 0.0.0.0 --port $PORT --no-server-header
 ```
+Before the first deploy run `python -m scripts.check_env`; on Supabase also run `python -m scripts.enable_rls --apply` once (see SECURITY_AUDIT.md).
 Set the environment variables above. Uploaded files live on the instance disk, which is wiped on redeploy (parsed text is kept in the database).
 If every visitor shares one rate-limit bucket, sign in as admin and open `/admin/client-ip`, then raise `TRUSTED_PROXY_HOPS`.
 

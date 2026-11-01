@@ -19,11 +19,16 @@ import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
 from app.core.database import Base, SessionLocal, engine  # noqa: E402
+from app.core import security  # noqa: E402
 from app.core.limiter import limiter  # noqa: E402
 from app.core.security import hash_password  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models.user import User  # noqa: E402
-from app.services import otp_service  # noqa: E402
+from app.services import chat_service, login_throttle, otp_service  # noqa: E402
+
+# Argon2 is deliberately slow; use the cheapest settings so the test-suite stays fast.
+# (Real hashes in production use the library's secure defaults.)
+security._ph = security.PasswordHasher(time_cost=1, memory_cost=8, parallelism=1)
 
 PASSWORD = "Str0ngPass1"
 
@@ -33,6 +38,8 @@ def fresh_db():
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     otp_service._failures.clear()
+    login_throttle.reset_all()
+    chat_service._per_visitor.clear()
     limiter.enabled = False
     limiter.reset()
     yield
