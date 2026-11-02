@@ -1,4 +1,4 @@
 -r requirements.txt
 pytest~=9.2
-pip-audit~=2.9
+pip-audit~=2.10
 bandit~=1.8
