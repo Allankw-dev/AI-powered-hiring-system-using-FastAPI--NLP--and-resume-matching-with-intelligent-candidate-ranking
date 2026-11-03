@@ -45,7 +45,7 @@ jobs:
         run: |
           pip install pip-audit
           pip-audit -r frontend/requirements.txt
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - name: Chat widget tests (jsdom)
