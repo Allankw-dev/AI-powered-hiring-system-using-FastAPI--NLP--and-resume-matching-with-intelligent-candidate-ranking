@@ -1,4 +1,4 @@
-# Third-party notices
+# Third-party notices.
 
 AI Hiring System is built on open-source software and open fonts. Thank you to their authors.
 This file lists what is used and under which licence. Regenerate it with `python -m scripts.generate_notices`.
