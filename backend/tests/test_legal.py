@@ -1,5 +1,6 @@
 """Compliance regression tests: legal documents, honest marketing claims, consent defaults, licensing."""
 import re
+import unicodedata
 from pathlib import Path
 
 import pytest
@@ -154,3 +155,68 @@ def test_no_image_or_font_files_are_shipped_without_a_licence_entry():
 def test_business_details_are_available_in_the_app():
     src = (FRONTEND / "legal_pages.py").read_text()
     assert "OPERATOR_NAME" in src and "CONTACT_EMAIL" in src and "render_contact" in src and "Nairobi, Kenya" in src
+
+
+# ───────────── links in the documentation must work on GitHub ─────────────
+def github_slug(text: str) -> str:
+    """The anchor GitHub generates for a heading (same rules as the github-slugger library).
+
+    Emoji are dropped, but invisible marks such as the variation selector U+FE0F (which some emoji
+    carry, for example the gear and the scales) are KEPT, which is exactly why a link like
+    '#-privacy--legal' silently stops working if the heading starts with such an emoji.
+    """
+    out = []
+    for ch in text.lower().strip():
+        category = unicodedata.category(ch)
+        if ch == " ":
+            out.append("-")
+        elif ch == "-" or category[0] in "LMN" or category == "Pc":
+            out.append(ch)
+    return "".join(out)
+
+
+def _doc_files():
+    return [p for p in REPO.rglob("*.md") if not {"node_modules", ".git", "venv"} & set(p.parts)]
+
+
+def _slugs(path: Path) -> set[str]:
+    seen: dict[str, int] = {}
+    slugs = set()
+    for line in path.read_text(encoding="utf-8").splitlines():
+        m = re.match(r"^#{1,6}\s+(.*)$", line)
+        if m:
+            text = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", m.group(1)).replace("`", "").replace("*", "")
+            slug = github_slug(text)
+            n = seen.get(slug, 0)
+            seen[slug] = n + 1
+            slugs.add(slug if n == 0 else f"{slug}-{n}")
+    return slugs
+
+
+def test_github_slug_matches_the_known_cases():
+    assert github_slug("\u2728 Features") == "-features"
+    assert github_slug("\U0001F510 Security") == "-security"
+    assert github_slug("4. Known limitations and residual risk") == "4-known-limitations-and-residual-risk"
+    # the bug: this emoji carries an invisible U+FE0F that GitHub keeps in the anchor
+    assert github_slug("\u2696\ufe0f Privacy & legal") == "\ufe0f-privacy--legal"
+    assert github_slug("\U0001F50F Privacy & legal") == "-privacy--legal"
+
+
+def test_every_markdown_link_in_the_docs_works():
+    problems = []
+    for doc in _doc_files():
+        text = doc.read_text(encoding="utf-8")
+        rel = doc.relative_to(REPO)
+        if "?nav=" in text:
+            problems.append(f"{rel}: contains an app-only '?nav=' link that does nothing on GitHub")
+        for target in re.findall(r"(?<!!)\[[^\]]*\]\(([^)\s]+)\)", text):
+            if re.match(r"(https?:|mailto:)", target):
+                continue
+            path_part, _, anchor = target.partition("#")
+            dest = doc if not path_part else (doc.parent / path_part).resolve()
+            if not dest.exists():
+                problems.append(f"{rel}: link to missing file '{path_part}'")
+                continue
+            if anchor and dest.is_file() and dest.suffix == ".md" and anchor not in _slugs(dest):
+                problems.append(f"{rel}: '#{anchor}' is not a heading in {dest.name}")
+    assert not problems, "broken links:\n  " + "\n  ".join(problems)

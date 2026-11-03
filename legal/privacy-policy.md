@@ -83,7 +83,7 @@ This service is for people aged **18 or over**. We ask you to confirm this when 
 
 ## 9. Cookies
 
-See the [Cookie Policy](?nav=Cookie%20Policy). In short: one security cookie, no tracking.
+See the [Cookie Policy](cookie-policy.md). In short: one security cookie, no tracking.
 
 ## 10. Changes
 

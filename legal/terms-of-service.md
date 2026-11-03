@@ -2,7 +2,7 @@
 
 **Last updated:** {{LEGAL_VERSION}}
 
-By creating an account or using AI Hiring System (the "Service") you agree to these terms and to our [Privacy Policy](?nav=Privacy%20Policy). If you do not agree, please do not use the Service.
+By creating an account or using AI Hiring System (the "Service") you agree to these terms and to our [Privacy Policy](privacy-policy.md). If you do not agree, please do not use the Service.
 
 ## 1. Who we are
 The Service is run by **{{OPERATOR_NAME}}**, {{OPERATOR_LOCATION}} ("we", "us"). Contact: {{CONTACT_EMAIL}}
@@ -29,7 +29,7 @@ Scores and rankings are produced by software using text comparison, skills and e
 Recruiters must treat candidate data confidentially, use it only to evaluate applications for the job it was submitted for, make decisions themselves rather than relying on scores alone, and follow the employment and data-protection laws that apply to them.
 
 ## 9. Fees
-The Service is **free**. There are no subscriptions, hidden charges or paid features. If we ever introduce paid features, we will tell you clearly beforehand and will not charge you without your explicit agreement. See the [Refund Policy](?nav=Refund%20Policy).
+The Service is **free**. There are no subscriptions, hidden charges or paid features. If we ever introduce paid features, we will tell you clearly beforehand and will not charge you without your explicit agreement. See the [Refund Policy](refund-policy.md).
 
 ## 10. Availability and changes
 The Service is a small independent project provided on an "as is" and "as available" basis. It may be slow, change, or be unavailable, and we may stop it. If we do, we will give notice where we reasonably can so you can download your data.

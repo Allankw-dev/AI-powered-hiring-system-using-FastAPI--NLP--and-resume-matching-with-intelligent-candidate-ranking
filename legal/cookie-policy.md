@@ -27,4 +27,4 @@ You can delete or block cookies in your browser settings. If you block the secur
 If we ever add anything beyond strictly necessary storage (for example analytics), we will update this page and ask for your permission **before** using it.
 
 ## Contact
-Questions: {{CONTACT_EMAIL}} ({{OPERATOR_NAME}}, {{OPERATOR_LOCATION}}). See also the [Privacy Policy](?nav=Privacy%20Policy).
+Questions: {{CONTACT_EMAIL}} ({{OPERATOR_NAME}}, {{OPERATOR_LOCATION}}). See also the [Privacy Policy](privacy-policy.md).

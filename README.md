@@ -61,7 +61,7 @@ Security is tested, not just claimed: the suite includes regression tests that w
 
 ---
 
-## ⚖️ Privacy & legal
+## 🔏 Privacy & legal
 
 Built-in, not bolted on. The full checklist (what was done, how to verify it, what is still up to you) is in **[COMPLIANCE.md](COMPLIANCE.md)**.
 

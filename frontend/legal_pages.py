@@ -48,8 +48,8 @@ def _fill(text: str) -> str:
                 .replace("{{OPERATOR_NAME}}", op["name"])
                 .replace("{{OPERATOR_LOCATION}}", op["location"])
                 .replace("{{CONTACT_EMAIL}}", op["email_or_fallback"]))
-    # In-app view: the footer buttons do the navigating, so turn "[Cookie Policy](?nav=…)" into plain bold text.
-    return re.sub(r"\[([^\]]+)\]\(\?nav=[^)]+\)", r"**\1**", text)
+    # In-app view: the footer buttons do the navigating, so turn "[Cookie Policy](cookie-policy.md)" into plain bold text.
+    return re.sub(r"\[([^\]]+)\]\((?:\?nav=[^)]+|[a-z-]+\.md)\)", r"**\1**", text)
 
 
 def _go(page: str):
