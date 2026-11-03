@@ -1,5 +1,29 @@
 # Upgrade notes
 
+## Legal & privacy release (read COMPLIANCE.md first)
+
+**Before deploying**
+1. Set `CONTACT_EMAIL` and `API_PUBLIC_URL` on Render, and `CONTACT_EMAIL` in the Streamlit secrets.
+2. No manual database step: on start-up the API **creates the two new tables** (`consent_records`, `email_optouts`) by itself and, on Postgres, turns row-level security on for them. Existing tables are never altered.
+3. Have the texts in `/legal` reviewed by a lawyer.
+
+**What users will notice**
+| Change | Effect |
+|---|---|
+| Sign-up | Two required, unticked boxes: Terms + Privacy, and "I am 18 or older". Existing accounts are not asked again (see COMPLIANCE.md). |
+| Footer on every page | Privacy Policy, Terms of Service, Cookie Policy, Refund Policy, Contact. |
+| Cookie notice | A short information bar on first visit. |
+| Profile | New **Privacy & data**: download my data, delete my account. |
+| Emails to candidates | Unsubscribe link in the footer; recruiters cannot email unsubscribed candidates. |
+| Home page | Unsupported statistics and claims replaced with checkable facts; Streamlit's own page list in the sidebar is hidden. |
+| Chat bubble | Fake notification dot removed; states it is an AI and not to share personal details. |
+
+**API changes:** `POST /auth/signup` now requires `accepted_terms: true` and `confirm_adult: true`. New: `GET /users/me/export`, `DELETE /users/me`, `POST /unsubscribe/{token}`.
+
+---
+
+# Previous release notes
+
 ## Security hardening release (read SECURITY_AUDIT.md first)
 
 **Before deploying**

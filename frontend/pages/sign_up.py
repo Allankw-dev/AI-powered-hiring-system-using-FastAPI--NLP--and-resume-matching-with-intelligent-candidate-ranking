@@ -54,8 +54,6 @@ def render():
     .card-title { font-family:'Orbitron',sans-serif; font-size:1.5rem; font-weight:900; background:linear-gradient(90deg,#a78bfa,#60a5fa,#c084fc); -webkit-background-clip:text; -webkit-text-fill-color:transparent; letter-spacing:3px; }
     .card-sub { font-family:'Exo 2',sans-serif; color:rgba(100,116,139,.7); font-size:11px; letter-spacing:1.5px; text-transform:uppercase; margin-top:3px; }
 
-    .prog-step { flex:1; height:3px; border-radius:2px; background:rgba(139,92,246,.15); border:1px solid rgba(139,92,246,.2); }
-    .prog-step.active { background:rgba(139,92,246,.4); border-color:rgba(139,92,246,.6); box-shadow:0 0 8px rgba(139,92,246,.4); }
 
     .neon-divider { height:1px; background:linear-gradient(90deg,transparent,rgba(139,92,246,.2),transparent); margin:16px 0; border:none; }
 
@@ -102,13 +100,6 @@ def render():
                     <div class="card-sub">// Join the future of hiring</div>
                 </div>
             </div>
-            <div style="display:flex;gap:6px;">
-                <div class="prog-step active"></div>
-                <div class="prog-step active"></div>
-                <div class="prog-step active"></div>
-                <div class="prog-step active"></div>
-                <div class="prog-step"></div>
-            </div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -123,6 +114,15 @@ def render():
                 confirm_password = st.text_input(" Confirm Password", type="password")
 
             st.caption("Password: at least 8 characters with an uppercase letter, a lowercase letter and a number.")
+
+            # Both boxes start UNTICKED and are separate: nothing is agreed to on your behalf.
+            st.markdown(
+                'Please read the <a href="?nav=Terms%20of%20Service" target="_blank" rel="noopener">Terms of Service</a> and the '
+                '<a href="?nav=Privacy%20Policy" target="_blank" rel="noopener">Privacy Policy</a> (each opens in a new tab).',
+                unsafe_allow_html=True,
+            )
+            accepted_terms = st.checkbox("I have read and agree to the Terms of Service and the Privacy Policy", value=False)
+            confirm_adult = st.checkbox("I confirm that I am 18 years old or older", value=False)
             submitted = st.form_submit_button(" CREATE ACCOUNT", use_container_width=True)
 
         if submitted:
@@ -130,9 +130,13 @@ def render():
                 st.warning(" Please fill in all fields.")
             elif password != confirm_password:
                 st.error("❌ Passwords do not match.")
+            elif not accepted_terms:
+                st.warning("Please tick the box to agree to the Terms of Service and the Privacy Policy.")
+            elif not confirm_adult:
+                st.warning("You must be 18 or older to create an account. Please tick the box to confirm.")
             else:
                 with st.spinner("Creating your account... please wait"):
-                    response = sign_up(full_name, email, password)
+                    response = sign_up(full_name, email, password, accepted_terms, confirm_adult)
 
                 if response.status_code in [200, 201]:
                     st.success("✅ Account created! Logging you in...")
@@ -158,10 +162,10 @@ def render():
 
         st.markdown("""
         <div class="bottom-stats">
-            <div class="bstat"><div class="bstat-num">Free</div><div class="bstat-lbl">Forever</div></div>
-            <div class="bstat"><div class="bstat-num">AI</div><div class="bstat-lbl">Powered</div></div>
-            <div class="bstat"><div class="bstat-num">256</div><div class="bstat-lbl">Bit Secure</div></div>
-            <div class="bstat"><div class="bstat-num">24/7</div><div class="bstat-lbl">Available</div></div>
+            <div class="bstat"><div class="bstat-num">Free</div><div class="bstat-lbl">No fees</div></div>
+            <div class="bstat"><div class="bstat-num">AI</div><div class="bstat-lbl">Assisted</div></div>
+            <div class="bstat"><div class="bstat-num">18+</div><div class="bstat-lbl">Adults only</div></div>
+            <div class="bstat"><div class="bstat-num">Human</div><div class="bstat-lbl">Final decision</div></div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -171,4 +175,4 @@ def render():
             st.session_state.page = "Login"
             st.rerun()
 
-        st.markdown('<div class="footer-text">// secure encrypted registration · ai hiring system</div>', unsafe_allow_html=True)
+        st.markdown('<div class="footer-text">// encrypted connection (https) · ai hiring system</div>', unsafe_allow_html=True)

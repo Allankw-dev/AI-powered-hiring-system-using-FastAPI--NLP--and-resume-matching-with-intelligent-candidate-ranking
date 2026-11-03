@@ -41,8 +41,6 @@ _CSS = r""".chat-bubble-wrap { position: fixed; bottom: 24px; right: 24px; z-ind
 @keyframes aiOrbit1 { from{transform:rotate(0deg) translateX(23px) rotate(0deg)} to{transform:rotate(360deg) translateX(23px) rotate(-360deg)} }
 @keyframes aiOrbit2 { from{transform:rotate(0deg) translateX(27px) rotate(0deg)} to{transform:rotate(360deg) translateX(27px) rotate(-360deg)} }
 
-.ai-notif { position: absolute; top: 2px; right: 2px; width: 13px; height: 13px; background: #10b981; border-radius: 50%; border: 2px solid #000510; animation: aiNotif 2s infinite; z-index: 10; }
-@keyframes aiNotif { 0%,100%{transform:scale(1)} 50%{transform:scale(1.4)} }
 
 .ai-chat-window {
     position: fixed; bottom: 96px; right: 24px;
@@ -72,8 +70,8 @@ _CSS = r""".chat-bubble-wrap { position: fixed; bottom: 24px; right: 24px; z-ind
 
 .ai-header-name { font-size: 14px; font-weight: 700; color: #e2e8f0; }
 .ai-header-status { font-size: 11px; color: #10b981; display: flex; align-items: center; gap: 4px; margin-top: 2px; }
-.ai-status-dot { width: 6px; height: 6px; background: #10b981; border-radius: 50%; animation: aiNotif 2s infinite; }
-.ai-close-btn { background: none; border: none; cursor: pointer; color: rgba(148,163,184,0.6); font-size: 16px; padding: 6px; border-radius: 8px; margin-left: auto; }
+.ai-status-dot { width: 6px; height: 6px; background: #10b981; border-radius: 50%; }
+.ai-close-btn { background: none; border: none; cursor: pointer; color: #cbd5e1; font-size: 16px; padding: 6px; border-radius: 8px; margin-left: auto; }
 .ai-close-btn:hover { color: #e2e8f0; background: rgba(255,255,255,0.08); }
 
 .ai-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
@@ -101,7 +99,9 @@ _CSS = r""".chat-bubble-wrap { position: fixed; bottom: 24px; right: 24px; z-ind
 .ai-input-area { padding: 12px 14px; border-top: 1px solid rgba(139,92,246,0.15); display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
 .ai-input { flex: 1; padding: 10px 14px; background: rgba(139,92,246,0.06); border: 1px solid rgba(139,92,246,0.2); border-radius: 12px; color: #e2e8f0; font-size: 13px; outline: none; resize: none; font-family: inherit; }
 .ai-input:focus { border-color: rgba(139,92,246,0.5); }
-.ai-input::placeholder { color: rgba(100,116,139,0.6); }
+.ai-input::placeholder { color: #94a3b8; }
+.ai-note { padding: 8px 16px; font-size: 11px; line-height: 1.4; color: #94a3b8; border-bottom: 1px solid rgba(139,92,246,0.15); }
+.bubble-btn:focus-visible, .ai-close-btn:focus-visible, .ai-qbtn:focus-visible, .ai-send:focus-visible, .ai-input:focus-visible { outline: 3px solid #fbbf24; outline-offset: 2px; }
 .ai-send { width: 38px; height: 38px; background: linear-gradient(135deg, #7c3aed, #4f46e5); border: none; border-radius: 10px; cursor: pointer; color: white; font-size: 16px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
 .ai-send:hover { transform: scale(1.05); }"""
 
@@ -115,11 +115,10 @@ _MARKUP = r"""<div class="chat-bubble-wrap">
             <div class="ai-dot ai-dot-2"></div>
             <div class="ai-core"></div>
         </div>
-        <div class="ai-notif" id="aiNotifDot"></div>
     </button>
 </div>
 
-<div class="ai-chat-window ai-hidden" id="aiChatWindow">
+<div class="ai-chat-window ai-hidden" id="aiChatWindow" role="dialog" aria-label="Hira, AI assistant">
     <div class="ai-chat-header">
         <div class="ai-header-orbital">
             <div class="ai-header-ring ahr1"></div>
@@ -128,12 +127,14 @@ _MARKUP = r"""<div class="chat-bubble-wrap">
         </div>
         <div style="flex:1">
             <div class="ai-header-name">Hira — AI Assistant</div>
-            <div class="ai-header-status"><div class="ai-status-dot"></div> Online · Powered by AI</div>
+            <div class="ai-header-status"><div class="ai-status-dot"></div> AI assistant · can make mistakes</div>
         </div>
         <button class="ai-close-btn" id="hiraClose" aria-label="Close chat">✕</button>
     </div>
 
-    <div class="ai-messages" id="aiMessages">
+    <div class="ai-note">Answers come from an AI and may be wrong. Your messages are sent to an AI provider (Anthropic or Google), so please do not share personal details.</div>
+
+    <div class="ai-messages" id="aiMessages" aria-live="polite">
         <div class="ai-msg">
             <div class="ai-avatar">🤖</div>
             <div class="ai-bubble ai-bot">
@@ -147,7 +148,7 @@ _MARKUP = r"""<div class="chat-bubble-wrap">
         <button class="ai-qbtn" data-q="How does AI scoring work?">How scoring works?</button>
         <button class="ai-qbtn" data-q="Give me resume tips">Resume tips</button>
         <button class="ai-qbtn" data-q="How do I apply for jobs?">How to apply?</button>
-        <button class="ai-qbtn" data-q="What is fraud detection?">Fraud detection</button>
+        <button class="ai-qbtn" data-q="What are the resume consistency checks?">Resume checks</button>
     </div>
 
     <div class="ai-input-area">
@@ -184,13 +185,12 @@ _JS = r"""(function () {
 
   function $(id) { return doc.getElementById(id); }
   var win = $('aiChatWindow'), msgs = $('aiMessages'), input = $('aiChatInput'),
-      quick = $('aiQuickReplies'), dot = $('aiNotifDot');
+      quick = $('aiQuickReplies');
   var busy = false;
 
   function setOpen(v) {
     state.open = v;
     win.classList.toggle('ai-hidden', !v);
-    dot.style.display = v ? 'none' : 'block';
     if (v) input.focus();
   }
 
@@ -262,6 +262,10 @@ _JS = r"""(function () {
 
   $('hiraBubble').addEventListener('click', function () { setOpen(!state.open); });
   $('hiraClose').addEventListener('click', function () { setOpen(false); });
+  // Keyboard users: Escape closes the chat and returns focus to the chat button.
+  win.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { setOpen(false); $('hiraBubble').focus(); }
+  });
   $('hiraSend').addEventListener('click', function () { send(input.value); });
   input.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input.value); }
@@ -291,4 +295,8 @@ def build_html(api_url: str) -> str:
 
 
 def render(api_url: str) -> None:
-    components.html(build_html(api_url), height=0)
+    doc = (
+        '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Chat assistant loader</title></head>'
+        "<body>" + build_html(api_url) + "</body></html>"
+    )
+    components.html(doc, height=0)

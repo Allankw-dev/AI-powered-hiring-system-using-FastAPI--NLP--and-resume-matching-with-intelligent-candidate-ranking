@@ -213,7 +213,7 @@ def render():
 
         with col2:
             st.write("**Overall Score:**", selected.get("overall_score", "N/A"))
-            st.write("**Semantic Score:**", selected.get("semantic_score", "N/A"))
+            st.write("**Text similarity score:**", selected.get("semantic_score", "N/A"))
             st.write("**Skills Score:**", selected.get("skills_score", "N/A"))
             st.write("**Experience Score:**", selected.get("experience_score", "N/A"))
             st.write("**Verification Score:**", selected.get("verification_score", "N/A"))

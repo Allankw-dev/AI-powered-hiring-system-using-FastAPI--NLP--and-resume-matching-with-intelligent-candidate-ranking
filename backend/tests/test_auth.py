@@ -2,11 +2,11 @@ from datetime import timedelta
 
 from app.core.timeutil import utcnow
 from app.models.user import User
-from tests.conftest import PASSWORD, make_user
+from tests.conftest import PASSWORD, make_user, CONSENT
 
 
 def signup(client, email="new@example.com", password=PASSWORD, **extra):
-    return client.post("/auth/signup", json={"full_name": "New Person", "email": email, "password": password, **extra})
+    return client.post("/auth/signup", json={"full_name": "New Person", "email": email, "password": password, **CONSENT, **extra})
 
 
 def test_signup_and_login_candidate(client):
@@ -131,5 +131,5 @@ def test_errors_never_leak_internals(client, monkeypatch, db):
     def boom(*a, **k):
         raise RuntimeError("secret internal detail")
     monkeypatch.setattr("app.routers.auth.hash_password", boom)
-    r = client.post("/auth/signup", json={"full_name": "Boom Boom", "email": "boom@example.com", "password": PASSWORD})
+    r = client.post("/auth/signup", json={"full_name": "Boom Boom", "email": "boom@example.com", "password": PASSWORD, **CONSENT})
     assert r.status_code == 500 and "secret" not in r.text

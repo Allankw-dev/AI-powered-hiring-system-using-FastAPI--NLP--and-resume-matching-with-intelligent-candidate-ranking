@@ -59,6 +59,9 @@ def db():
         session.close()
 
 
+CONSENT = {"accepted_terms": True, "confirm_adult": True}  # the two required signup checkboxes
+
+
 def make_user(db, email, role="candidate", password=PASSWORD, name="Test User"):
     user = User(full_name=name, email=email, password_hash=hash_password(password), role=role, is_active=True)
     db.add(user)

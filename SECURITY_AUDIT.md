@@ -93,6 +93,16 @@ Legend: **Fixed** = changed in code, covered by a test. **Manual** = needs you (
 
 ---
 
+## 4b. Added with the privacy release
+
+* `DELETE /users/me` needs the password again, goes through the same wrong-password lock-out as login, answers **403** (not 401) for a wrong password so clients do not mistake it for an expired session, and refuses admin accounts.
+* `GET /users/me/export` and `DELETE /users/me` are rate limited to 5 per hour.
+* Unsubscribe tokens are signed, expire after a year, can only unsubscribe the address inside them and cannot be used to log in (and login tokens cannot unsubscribe anyone). The endpoint is POST-only so mail scanners cannot trigger it.
+* Tables created by an update (`app/core/db_setup.py`) get row-level security switched on in the same step.
+* All new routes appear in the access-control tests (anonymous callers are rejected everywhere except the explicitly listed public routes).
+
+---
+
 ## 5. After deploying
 
 * Everyone is signed out once (tokens now carry the password binding). Users just log in again; legacy bcrypt hashes upgrade silently.

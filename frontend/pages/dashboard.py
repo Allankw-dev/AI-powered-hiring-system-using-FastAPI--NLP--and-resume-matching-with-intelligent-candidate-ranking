@@ -255,7 +255,7 @@ def render():
                         <span class="status-badge {status_class}">{esc(status.upper())}</span>
                         <div class="score-row">
                             <div class="score-chip">Overall <span>{esc(app.get('overall_score', 'N/A'))}</span></div>
-                            <div class="score-chip">Semantic <span>{esc(app.get('semantic_score', 'N/A'))}</span></div>
+                            <div class="score-chip">Text match <span>{esc(app.get('semantic_score', 'N/A'))}</span></div>
                             <div class="score-chip">Skills <span>{esc(app.get('skills_score', 'N/A'))}</span></div>
                             <div class="score-chip">Experience <span>{esc(app.get('experience_score', 'N/A'))}</span></div>
                             <div class="score-chip">Verification <span>{esc(app.get('verification_score', 'N/A'))}</span></div>

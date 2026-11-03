@@ -7,6 +7,7 @@ from app.core.dep import get_db, require_admin
 from app.core.limiter import client_ip, limiter
 from app.models.application import Application
 from app.models.email_log import EmailLog
+from app.models.email_optout import EmailOptOut
 from app.models.job import Job
 from app.models.resume import Resume
 from app.models.user import User
@@ -105,6 +106,9 @@ def send_email_to_candidate(
     user = db.query(User).filter(User.id == application.user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    if db.query(EmailOptOut).filter(EmailOptOut.email == user.email.lower()).first():
+        raise HTTPException(status_code=409, detail="This candidate has unsubscribed from emails, so nothing was sent.")
 
     background_tasks.add_task(
         send_admin_email,

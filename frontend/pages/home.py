@@ -12,8 +12,9 @@ def render():
 
     components.html("""
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
+    <title>AI Hiring System - home</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Exo+2:wght@300;400;600;700&display=swap');
@@ -166,7 +167,7 @@ def render():
             margin-bottom: 6px; letter-spacing: 1px;
         }
 
-        .section-sub { text-align:center; color:#64748b; font-size:12px; margin-bottom:24px; letter-spacing:1px; }
+        .section-sub { text-align:center; color:#94a3b8; font-size:12px; margin-bottom:24px; letter-spacing:1px; }
 
         .steps-grid {
             display: grid; grid-template-columns: repeat(4, 1fr);
@@ -182,7 +183,7 @@ def render():
         .step:hover { border-color:rgba(139,92,246,.4); transform:translateY(-4px); }
         .step-num { font-family:'Orbitron',sans-serif; font-size:2rem; font-weight:900; background:linear-gradient(135deg,#8b5cf6,#3b82f6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-bottom:8px; }
         .step-title { font-weight:700; color:#e2e8f0; font-size:13px; margin-bottom:4px; }
-        .step-text { color:#64748b; font-size:11px; line-height:1.5; }
+        .step-text { color:#94a3b8; font-size:12px; line-height:1.5; }
 
         .feature-grid {
             display: grid; grid-template-columns: repeat(3, 1fr);
@@ -199,7 +200,7 @@ def render():
         .feature-card:hover { border-color:rgba(139,92,246,.45); transform:translateY(-5px); }
         .feature-icon { font-size:28px; margin-bottom:10px; }
         .feature-title { font-family:'Orbitron',sans-serif; font-size:12px; font-weight:700; color:#e2e8f0; margin-bottom:6px; }
-        .feature-text { color:#64748b; font-size:11px; line-height:1.6; }
+        .feature-text { color:#94a3b8; font-size:12px; line-height:1.6; }
 
         .cta-wrapper {
             background: radial-gradient(ellipse at center, rgba(139,92,246,0.15) 0%, transparent 70%);
@@ -222,11 +223,13 @@ def render():
             .cta-btn-row { grid-template-columns: 1fr; }
             .btn-row { grid-template-columns: 1fr; }
         }
+            a.btn:focus-visible { outline: 3px solid #fbbf24; outline-offset: 3px; }
+        @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
     </style>
     </head>
     <body>
 
-    <canvas id="c"></canvas>
+    <canvas id="c" aria-hidden="true"></canvas>
 
     <div class="content">
         <div class="hero-grid">
@@ -238,29 +241,28 @@ def render():
                     Win Better.
                 </div>
                 <div class="hero-text">
-                    Transform your recruitment with AI-powered resume analysis,
-                    intelligent candidate scoring, and data-driven hiring decisions —
-                    all in one unified platform built for the future.
+                    AI-assisted resume analysis and candidate scoring in one place.
+                    The software ranks applicants; a person always makes the final decision.
                 </div>
                 <div class="stats-wrapper">
-                    <div class="stat-item"><div class="stat-number">98%</div><div class="stat-label">Match Accuracy</div></div>
-                    <div class="stat-item"><div class="stat-number">10x</div><div class="stat-label">Faster Hiring</div></div>
-                    <div class="stat-item"><div class="stat-number">500+</div><div class="stat-label">Jobs Matched</div></div>
-                    <div class="stat-item"><div class="stat-number">24/7</div><div class="stat-label">AI Active</div></div>
+                    <div class="stat-item"><div class="stat-number">4</div><div class="stat-label">Scoring factors</div></div>
+                    <div class="stat-item"><div class="stat-number">93</div><div class="stat-label">Skills recognised</div></div>
+                    <div class="stat-item"><div class="stat-number">Free</div><div class="stat-label">No fees</div></div>
+                    <div class="stat-item"><div class="stat-number">Human</div><div class="stat-label">Final decision</div></div>
                 </div>
                 <div class="btn-row">
-                    <a class="btn btn-primary" href="javascript:void(0)" onclick="navigateTo('Sign Up')">🚀 Get Started — Free</a>
-                    <a class="btn btn-secondary" href="javascript:void(0)" onclick="navigateTo('Login')">🔐 Login</a>
+                    <a class="btn btn-primary" href="#" role="button" onclick="navigateTo('Sign Up'); return false;" onkeydown="if (event.key === ' ') { event.preventDefault(); navigateTo('Sign Up'); }">🚀 Get Started — Free</a>
+                    <a class="btn btn-secondary" href="#" role="button" onclick="navigateTo('Login'); return false;" onkeydown="if (event.key === ' ') { event.preventDefault(); navigateTo('Login'); }">🔐 Login</a>
                 </div>
             </div>
 
             <div class="side-panel">
                 <div class="panel-title">// Platform Capabilities</div>
-                <div class="panel-item"><div class="panel-dot"></div><div class="panel-item-text"><span class="panel-item-title">AI Resume Parsing</span>Automatically extract skills, experience, and qualifications from uploaded CVs</div></div>
-                <div class="panel-item"><div class="panel-dot"></div><div class="panel-item-text"><span class="panel-item-title">Intelligent Scoring</span>Rank candidates using semantic analysis, skill matching, and experience scoring</div></div>
-                <div class="panel-item"><div class="panel-dot"></div><div class="panel-item-text"><span class="panel-item-title">Fraud Detection</span>Verify resume authenticity and flag suspicious or exaggerated claims</div></div>
-                <div class="panel-item"><div class="panel-dot"></div><div class="panel-item-text"><span class="panel-item-title">Admin Control Center</span>Full visibility into applications, shortlisting, rejection, and email communication</div></div>
-                <div class="panel-item"><div class="panel-dot"></div><div class="panel-item-text"><span class="panel-item-title">Real-Time Rankings</span>Live candidate leaderboards updated instantly as new applications arrive</div></div>
+                <div class="panel-item"><div class="panel-dot"></div><div class="panel-item-text"><span class="panel-item-title">AI Resume Parsing</span>Extract skills and years of experience from uploaded PDF or text resumes</div></div>
+                <div class="panel-item"><div class="panel-dot"></div><div class="panel-item-text"><span class="panel-item-title">Intelligent Scoring</span>Rank candidates using text comparison, skill matching and experience scoring</div></div>
+                <div class="panel-item"><div class="panel-dot"></div><div class="panel-item-text"><span class="panel-item-title">Consistency Checks</span>Flag patterns such as keyword stuffing or inconsistent dates for a person to look at</div></div>
+                <div class="panel-item"><div class="panel-dot"></div><div class="panel-item-text"><span class="panel-item-title">Admin Control Center</span>See applications, shortlist or reject candidates, and email them</div></div>
+                <div class="panel-item"><div class="panel-dot"></div><div class="panel-item-text"><span class="panel-item-title">Real-Time Rankings</span>Rankings update whenever a new application arrives</div></div>
             </div>
         </div>
 
@@ -271,8 +273,8 @@ def render():
         <div class="steps-grid">
             <div class="step"><div class="step-num">01</div><div class="step-title">Post a Job</div><div class="step-text">Admin creates listings with required skills & experience level</div></div>
             <div class="step"><div class="step-num">02</div><div class="step-title">Upload Resume</div><div class="step-text">Candidates apply and upload CVs directly to the platform</div></div>
-            <div class="step"><div class="step-num">03</div><div class="step-title">AI Analyzes</div><div class="step-text">AI scores, ranks and verifies each application instantly</div></div>
-            <div class="step"><div class="step-num">04</div><div class="step-title">Hire the Best</div><div class="step-text">Admins review top candidates and make confident decisions</div></div>
+            <div class="step"><div class="step-num">03</div><div class="step-title">AI Analyzes</div><div class="step-text">Software scores and ranks each application against the job</div></div>
+            <div class="step"><div class="step-num">04</div><div class="step-title">Hire the Best</div><div class="step-text">Recruiters review the ranked list and decide</div></div>
         </div>
 
         <div class="neon-divider"></div>
@@ -280,23 +282,23 @@ def render():
         <div class="section-heading">Platform Features</div>
         <div class="section-sub">// Everything for modern intelligent recruitment</div>
         <div class="feature-grid">
-            <div class="feature-card"><div class="feature-icon"></div><div class="feature-title">Resume Intelligence</div><div class="feature-text">Upload PDFs and let AI parse, extract, and analyze candidate data with high precision.</div></div>
-            <div class="feature-card"><div class="feature-icon"></div><div class="feature-title">Semantic AI Scoring</div><div class="feature-text">Goes beyond keywords — understands context, experience depth, and skill relevance.</div></div>
-            <div class="feature-card"><div class="feature-icon"></div><div class="feature-title">Verification Engine</div><div class="feature-text">Detects inconsistencies, flags risk factors, and verifies resume authenticity.</div></div>
-            <div class="feature-card"><div class="feature-icon"></div><div class="feature-title">Real-Time Rankings</div><div class="feature-text">Candidate leaderboards update instantly as new applications arrive.</div></div>
-            <div class="feature-card"><div class="feature-icon"></div><div class="feature-title">Smart Communication</div><div class="feature-text">Send personalized emails directly from the platform with one click.</div></div>
-            <div class="feature-card"><div class="feature-icon"></div><div class="feature-title">Hiring Analytics</div><div class="feature-text">Full visibility into your pipeline — scores, statuses, and hiring trends.</div></div>
+            <div class="feature-card"><div class="feature-icon"></div><div class="feature-title">Resume Intelligence</div><div class="feature-text">Upload PDF or text resumes and let the software extract skills and experience.</div></div>
+            <div class="feature-card"><div class="feature-icon"></div><div class="feature-title">Transparent Scoring</div><div class="feature-text">Compares resume and job text, required skills and experience, and shows candidates how they matched.</div></div>
+            <div class="feature-card"><div class="feature-icon"></div><div class="feature-title">Consistency Checks</div><div class="feature-text">Flags patterns such as keyword stuffing or inconsistent dates. A flag is a prompt for a human, not proof.</div></div>
+            <div class="feature-card"><div class="feature-icon"></div><div class="feature-title">Real-Time Rankings</div><div class="feature-text">Rankings update whenever a new application arrives.</div></div>
+            <div class="feature-card"><div class="feature-icon"></div><div class="feature-title">Smart Communication</div><div class="feature-text">Recruiters can email candidates from the platform. Candidates can unsubscribe from those emails.</div></div>
+            <div class="feature-card"><div class="feature-icon"></div><div class="feature-title">Hiring Pipeline</div><div class="feature-text">See every application with its score and status in one list.</div></div>
         </div>
 
         <div class="neon-divider"></div>
 
         <div class="cta-wrapper">
-            <div class="cta-title">Ready to Transform Your Hiring?</div>
-            <div class="cta-text">Join the future of recruitment. Set up in minutes, hire better forever.</div>
+            <div class="cta-title">Ready to try it?</div>
+            <div class="cta-text">Create a free account in a minute. Candidates must be 18 or older.</div>
             <div class="cta-btn-row">
-                <a class="btn btn-primary" href="javascript:void(0)" onclick="navigateTo('Sign Up')"> Create Free Account</a>
-                <a class="btn btn-secondary" href="javascript:void(0)" onclick="navigateTo('Login')"> Sign In</a>
-                <a class="btn btn-secondary" href="javascript:void(0)" onclick="navigateTo('Jobs')"> Browse Jobs</a>
+                <a class="btn btn-primary" href="#" role="button" onclick="navigateTo('Sign Up'); return false;" onkeydown="if (event.key === ' ') { event.preventDefault(); navigateTo('Sign Up'); }"> Create Free Account</a>
+                <a class="btn btn-secondary" href="#" role="button" onclick="navigateTo('Login'); return false;" onkeydown="if (event.key === ' ') { event.preventDefault(); navigateTo('Login'); }"> Sign In</a>
+                <a class="btn btn-secondary" href="#" role="button" onclick="navigateTo('Jobs'); return false;" onkeydown="if (event.key === ' ') { event.preventDefault(); navigateTo('Jobs'); }"> Browse Jobs</a>
             </div>
         </div>
     </div>

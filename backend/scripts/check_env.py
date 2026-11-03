@@ -45,6 +45,8 @@ def main() -> int:
     add(FAIL if (prod and "*" in origins) else OK, f"CORS allows: {', '.join(origins) or 'nothing'}")
     add(FAIL if (prod and s.docs_enabled) else OK, f"/docs {'ENABLED' if s.docs_enabled else 'disabled'}")
     add(OK if s.FRONTEND_URL.startswith("https://") or not prod else FAIL, f"FRONTEND_URL = {s.FRONTEND_URL}")
+    add(OK if s.CONTACT_EMAIL else (WARN if prod else OK), "CONTACT_EMAIL set (privacy requests)" if s.CONTACT_EMAIL else "CONTACT_EMAIL is not set: the legal pages and email footers have no contact address")
+    add(OK if s.API_PUBLIC_URL else WARN, "API_PUBLIC_URL set (one-click unsubscribe headers on)" if s.API_PUBLIC_URL else "API_PUBLIC_URL not set: emails carry an unsubscribe link but no one-click header")
     add(OK if s.TRUSTED_PROXY_HOPS >= 1 or not prod else WARN, f"TRUSTED_PROXY_HOPS = {s.TRUSTED_PROXY_HOPS}")
 
     for level, text in checks:

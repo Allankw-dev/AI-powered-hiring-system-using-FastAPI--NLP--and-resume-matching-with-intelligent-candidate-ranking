@@ -8,7 +8,7 @@
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python)](https://python.org)
 [![CI](https://img.shields.io/github/actions/workflow/status/Allankw-dev/AI-powered-hiring-system-using-FastAPI--NLP--and-resume-matching-with-intelligent-candidate-ranking/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/Allankw-dev/AI-powered-hiring-system-using-FastAPI--NLP--and-resume-matching-with-intelligent-candidate-ranking/actions)
 
-**Jump to:** [Features](#-features) · [Security](#-security) · [Getting started](#-getting-started) · [Scripts](#-maintenance-scripts) · [API](#-api) · [Deployment](#-deployment)
+**Jump to:** [Features](#-features) · [Security](#-security) · [Privacy](#-privacy--legal) · [Getting started](#-getting-started) · [Scripts](#-maintenance-scripts) · [API](#-api) · [Deployment](#-deployment)
 
 ---
 
@@ -32,7 +32,7 @@
 Applications are ranked per job (`ranking_position`). Admins can re-score a job's applications after editing it.
 
 ### 👥 Roles
-- **Candidates** — sign up, upload resumes (PDF/TXT), apply, see their own matched/missing skills, manage their profile and picture
+- **Candidates** — sign up (18+, with explicit consent), upload resumes (PDF/TXT), apply, see their own matched/missing skills, manage their profile and picture, **download or delete all their data**
 - **Admins** — post jobs, review AI-ranked candidates (all jobs or one job), shortlist/reject, email candidates. Admins sign in with **password + emailed one-time code**.
 
 ### 🤖 Hira assistant
@@ -58,6 +58,25 @@ Security is tested, not just claimed: the suite includes regression tests that w
 | **Supply chain** | Version-ranged requirements, `pip-audit` + `bandit` + secret scan in CI, Dependabot updates, least-privilege CI token. |
 
 **Found a vulnerability?** Please report it privately (GitHub → Security → *Report a vulnerability*, or contact the author) instead of opening a public issue.
+
+---
+
+## ⚖️ Privacy & legal
+
+Built-in, not bolted on. The full checklist (what was done, how to verify it, what is still up to you) is in **[COMPLIANCE.md](COMPLIANCE.md)**.
+
+| | |
+|---|---|
+| **Legal pages** | Privacy Policy, Terms of Service, Cookie Policy and Refund Policy in [`/legal`](legal) (shown in the app, linked from every page). They are templates drafted from what the app actually does, **not legal advice: have them reviewed before launch.** |
+| **Consent & age** | Sign-up has two separate, unticked boxes (Terms + Privacy, and "I am 18+"). Both are enforced by the API and stored with the date and text version. |
+| **Your data** | *Profile → Privacy & data*: download everything as JSON, or permanently delete the account (resumes and files, applications, scores, messages, consents). |
+| **Email** | Candidate emails carry an unsubscribe link and one-click headers; unsubscribed addresses cannot be emailed. |
+| **Honest marketing** | No invented statistics, no fake notifications or progress bars. Tests fail if known unsupported claims return. |
+| **Cookies** | One session security cookie, no tracking. A test fails if a tracker is added without updating the policy. |
+| **Accessibility** | Checked in a real browser: axe-core reports 0 issues on the main pages, text contrast meets WCAG AA, everything works from the keyboard. |
+| **Licences** | [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) lists fonts and every dependency with its licence. |
+
+**Before going live** set `CONTACT_EMAIL` (and `API_PUBLIC_URL`) on Render, and `CONTACT_EMAIL` in the Streamlit secrets.
 
 ---
 
@@ -96,6 +115,10 @@ pip install -r requirements.txt
 Create `frontend/.streamlit/secrets.toml` (it is git-ignored):
 ```toml
 API_URL = "http://localhost:8000"
+# optional, shown in the legal pages and footer:
+# CONTACT_EMAIL = "you@example.com"
+# OPERATOR_NAME = "Allan Kamau"
+# OPERATOR_LOCATION = "Nairobi, Kenya"
 ```
 ```bash
 streamlit run app.py
@@ -125,6 +148,7 @@ Run these from `backend/` (they use the same `.env` / environment variables as t
 | `python -m scripts.manage_admin create\|promote\|demote\|set-password <email>` | The only way admins are created or changed. |
 | `python -m scripts.check_env` | Validate your configuration before deploying. Never prints a secret; exits non-zero on problems. |
 | `python -m scripts.enable_rls [--apply]` | Postgres only. Turn on row-level security for every table so Supabase's public REST API cannot read them. Dry run by default; safe to repeat. |
+| `python -m scripts.generate_notices` | Regenerate `THIRD_PARTY_NOTICES.md` (licences of all dependencies and fonts). |
 | `python -m scripts.scan_secrets [--history]` | Scan tracked files (and optionally all past commits) for committed secrets. Output is redacted. |
 
 ---
@@ -143,6 +167,9 @@ Copy `backend/.env.example` and fill it in. Never commit the real `.env`.
 | `ENVIRONMENT` | optional | `production` (default), `development` or `test` |
 | `FRONTEND_URL` | optional | Used in password-reset links, and as the default allowed CORS origin |
 | `CORS_ORIGINS` | optional | Empty (default) = only `FRONTEND_URL`. Or a comma-separated list. |
+| `CONTACT_EMAIL` | **set before launch** | Privacy/support contact shown in the legal pages, the footer and email footers |
+| `OPERATOR_NAME`, `OPERATOR_LOCATION` | optional | Who runs the service (defaults: Allan Kamau, Nairobi, Kenya) |
+| `API_PUBLIC_URL` | recommended | Public https URL of this API; enables one-click unsubscribe headers in emails |
 | `ENABLE_DOCS` | optional | `true` to expose `/docs` (off in production by default) |
 | `OTP_DELIVERY` | optional | `email` (default) or `log` (prints the code in the server log — emergency use only) |
 | `TRUSTED_PROXY_HOPS` | optional | Proxies in front of the API (default 1) |
@@ -163,7 +190,8 @@ Copy `backend/.env.example` and fill it in. Never commit the real `.env`.
 | Resumes | `POST /resumes/upload` · `GET /resumes/my` · `DELETE /resumes/{id}` |
 | Applications | `POST /applications/` · `GET /applications/my` |
 | Admin | `GET /admin/top-candidates?job_id=&limit=` · `POST /admin/applications/{id}/shortlist` · `…/reject` · `POST /admin/send-email` · `POST /admin/jobs/{id}/rescore` · `GET /admin/client-ip` |
-| Users | `GET/PUT /users/me` · `POST /users/me/upload-picture` · `GET /users/me/picture` |
+| Users | `GET/PUT /users/me` · `POST /users/me/upload-picture` · `GET /users/me/picture` · `GET /users/me/export` (download my data) · `DELETE /users/me` (delete my account, needs the password) |
+| Email | `POST /unsubscribe/{token}` (public; the signed link from the bottom of an email) |
 | Utilities | `POST /chat` · `GET /health` |
 
 All routes except sign-up, login, password reset, chat and health require a bearer token. Interactive docs are at `/docs` only when `ENVIRONMENT` is not `production` (or `ENABLE_DOCS=true`).
@@ -175,22 +203,25 @@ All routes except sign-up, login, password reset, chat and health require a bear
 ```
 backend/
 ├── app/
-│   ├── core/        config · database · security · dependencies · limiter · middleware · sanitize
-│   ├── models/      user · job · resume · application · email_log
+│   ├── core/        config · database · db_setup · security · dependencies · limiter · middleware · sanitize · legal
+│   ├── models/      user · job · resume · application · email_log · consent · email_optout
 │   ├── routers/     auth · password_reset · jobs · resumes · applications · admin · users · chat
 │   ├── schemas/     Pydantic request/response models (input validation + sanitising)
 │   ├── services/    ai_engine · ranking · verifier · resume_validator · email · otp · login_throttle · chat
 │   └── main.py
-├── scripts/         init_db · manage_admin · check_env · enable_rls · scan_secrets
+├── scripts/         init_db · manage_admin · check_env · enable_rls · scan_secrets · generate_notices
 ├── tests/           pytest suite (functional + security regression tests)
 ├── requirements.txt · requirements-dev.txt
 frontend/
-├── app.py · api.py · safe.py · chat_widget.py
+├── app.py · api.py · safe.py · legal_pages.py · chat_widget.py
 ├── pages/           home · login · sign_up · admin_2FA_login · dashboard · jobs · applications · profile · …
 ├── tests/           chat widget tests
 └── requirements.txt
 .streamlit/config.toml   Streamlit hardening (XSRF protection, no error details for visitors)
 .github/                 CI workflow · Dependabot
+legal/                   Privacy Policy, Terms, Cookie Policy, Refund Policy (templates: have them reviewed)
+COMPLIANCE.md            The 20-point legal/compliance checklist: done, how to verify, what is left for you
+THIRD_PARTY_NOTICES.md   Licences of fonts and dependencies
 SECURITY_AUDIT.md        Findings, fixes and remaining risks
 UPGRADE_NOTES.md         What changed between releases and what to do when deploying
 ```
@@ -213,7 +244,8 @@ If every visitor shares one rate-limit bucket, sign in as admin and open `/admin
 2. Rotate any credential that has ever been committed (see [SECURITY_AUDIT.md](SECURITY_AUDIT.md)).
 3. On Supabase, run `python -m scripts.enable_rls --apply` once.
 4. Create your admin: `python -m scripts.manage_admin create you@example.com`.
-5. If the chat bubble cannot reach the API, set `CORS_ORIGINS` to your exact Streamlit URL.
+5. Set `CONTACT_EMAIL` and `API_PUBLIC_URL` (Render) and `CONTACT_EMAIL` (Streamlit secrets), then have the texts in `/legal` reviewed (see [COMPLIANCE.md](COMPLIANCE.md)).
+6. If the chat bubble cannot reach the API, set `CORS_ORIGINS` to your exact Streamlit URL.
 
 **Continuous integration** — every push runs the tests, a dependency vulnerability audit, a static security scan and a secret scan (backend), plus compile and widget tests (frontend). Dependabot opens weekly update pull requests.
 

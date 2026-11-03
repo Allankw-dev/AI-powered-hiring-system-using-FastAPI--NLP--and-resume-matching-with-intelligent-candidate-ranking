@@ -146,5 +146,29 @@ def decode_token(token: str):
         return None
 
 
+_UNSUBSCRIBE_PURPOSE = "unsubscribe"
+_UNSUBSCRIBE_DAYS = 365
+
+
+def create_unsubscribe_token(email: str) -> str:
+    """Signed link token that can do exactly one thing: unsubscribe this address.
+    It carries no ``user_id``/``pwv``, so it can never be used as a login token."""
+    now = utcnow()
+    return jwt.encode(
+        {"purpose": _UNSUBSCRIBE_PURPOSE, "email": email, "iss": TOKEN_ISSUER, "iat": now,
+         "exp": now + timedelta(days=_UNSUBSCRIBE_DAYS)},
+        settings.SECRET_KEY.get_secret_value(), algorithm=settings.ALGORITHM,
+    )
+
+
+def decode_unsubscribe_token(token: str) -> str | None:
+    """Return the email address in a valid unsubscribe token, else None."""
+    claims = decode_token(token)
+    if not claims or claims.get("purpose") != _UNSUBSCRIBE_PURPOSE:
+        return None
+    email = claims.get("email")
+    return email if isinstance(email, str) and "@" in email else None
+
+
 def password_fingerprint_matches(claim: object, password_hash: str) -> bool:
     return isinstance(claim, str) and hmac.compare_digest(claim, password_fingerprint(password_hash))

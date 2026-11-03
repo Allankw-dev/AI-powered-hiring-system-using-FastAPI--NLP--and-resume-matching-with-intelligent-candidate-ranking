@@ -1,6 +1,6 @@
 import streamlit as st
 import base64
-from api import my_resumes, my_applications, get_my_profile, update_my_profile, upload_profile_picture, get_my_picture
+from api import my_resumes, my_applications, get_my_profile, update_my_profile, upload_profile_picture, get_my_picture, export_my_data, delete_my_account, error_message
 from safe import esc
 
 
@@ -155,7 +155,7 @@ def render():
         if profile_picture:
             st.markdown(f"""
             <div class="avatar-wrapper">
-                <img src="{esc(profile_picture)}" style="width:100%;height:100%;object-fit:cover;" />
+                <img src="{esc(profile_picture)}" alt="Your profile picture" style="width:100%;height:100%;object-fit:cover;" />
             </div>
             """, unsafe_allow_html=True)
         else:
@@ -263,4 +263,46 @@ def render():
     else:
         st.error("Could not load applications.")
 
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── PRIVACY & DATA ──
+    st.markdown('<div class="neon-divider"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-label">// Privacy & data</div>', unsafe_allow_html=True)
+    st.write("You own your data. You can download a copy of everything we hold about you, or erase it all.")
+
+    st.markdown("**Download my data**")
+    if st.button("Prepare my data file", key="prepare_export"):
+        resp = export_my_data()
+        if resp.status_code == 200:
+            st.session_state["export_bytes"] = resp.content
+        else:
+            st.error(error_message(resp, "Could not prepare your data."))
+    if st.session_state.get("export_bytes"):
+        st.download_button(
+            "Download my data (JSON)",
+            data=st.session_state["export_bytes"],
+            file_name="my-data.json",
+            mime="application/json",
+            key="download_export",
+        )
+
+    st.markdown("**Delete my account**")
+    with st.expander("Permanently delete my account and all my data"):
+        st.warning(
+            "This is immediate and cannot be undone. Your account, resumes (including the files), applications, "
+            "scores, messages and consent records are erased."
+        )
+        delete_password = st.text_input("Enter your password to confirm", type="password", key="delete_password")
+        delete_sure = st.checkbox("I understand that this cannot be undone", key="delete_sure", value=False)
+        if st.button("Permanently delete my account", key="delete_account", disabled=not (delete_password and delete_sure)):
+            resp = delete_my_account(delete_password)
+            if resp.status_code == 200:
+                for key in ("token", "role", "user_email", "export_bytes", "delete_password", "delete_sure"):
+                    st.session_state.pop(key, None)
+                st.session_state["flash"] = "Your account and all its data have been permanently deleted."
+                st.session_state["page"] = "Home"
+                st.rerun()
+            else:
+                st.error(error_message(resp, "Could not delete the account."))
     st.markdown('</div>', unsafe_allow_html=True)

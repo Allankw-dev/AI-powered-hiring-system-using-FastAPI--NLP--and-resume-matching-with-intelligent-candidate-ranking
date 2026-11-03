@@ -17,22 +17,13 @@ import sys
 from sqlalchemy import text
 
 from app.core.database import Base, engine
+from app.core.db_setup import rls_statements
 
 importlib.import_module("app.models")  # registers every table on Base.metadata
 
 
 def statements() -> list[str]:
-    out = [f'ALTER TABLE public."{name}" ENABLE ROW LEVEL SECURITY;' for name in sorted(Base.metadata.tables)]
-    # Supabase roles used by the REST API; skipped on databases that do not have them.
-    names = ", ".join(f'public."{n}"' for n in sorted(Base.metadata.tables))
-    out.append(
-        "DO $$ BEGIN "  # nosec B608
-        "IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN "
-        f"EXECUTE 'REVOKE ALL ON {names} FROM anon'; END IF; "
-        "IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN "
-        f"EXECUTE 'REVOKE ALL ON {names} FROM authenticated'; END IF; END $$;"
-    )
-    return out
+    return rls_statements(list(Base.metadata.tables))
 
 
 def main() -> int:

@@ -119,7 +119,7 @@ def render():
                 st.session_state.forgot_password_sent = False
                 st.rerun()
 
-            st.markdown('<div class="footer-text">// 256-bit encrypted · secure connection</div>', unsafe_allow_html=True)
+            st.markdown('<div class="footer-text">// encrypted connection (https)</div>', unsafe_allow_html=True)
             return
 
         st.markdown("""
@@ -161,4 +161,4 @@ def render():
             st.session_state.page = "Login"
             st.rerun()
 
-        st.markdown('<div class="footer-text">// 256-bit encrypted · secure connection</div>', unsafe_allow_html=True)
+        st.markdown('<div class="footer-text">// encrypted connection (https)</div>', unsafe_allow_html=True)

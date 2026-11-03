@@ -16,7 +16,7 @@ from app.core.config import Settings
 from app.core.limiter import limiter
 from app.main import app
 from app.models.user import User
-from tests.conftest import PASSWORD, make_user
+from tests.conftest import CONSENT, PASSWORD, make_user
 
 BACKEND = Path(__file__).resolve().parents[1]
 
@@ -27,7 +27,7 @@ PUBLIC = {
     ("POST", "/auth/signup"), ("POST", "/auth/login"),
     ("POST", "/auth/admin/request-otp"), ("POST", "/auth/admin/verify-otp"),
     ("POST", "/password/forgot"), ("POST", "/password/reset"),
-    ("POST", "/chat"),
+    ("POST", "/chat"), ("POST", "/unsubscribe/{token}"),
 }
 
 
@@ -94,7 +94,7 @@ def test_users_cannot_touch_each_others_resumes(client, db, candidate_headers):
 
 def test_user_responses_never_contain_secrets(client, candidate_headers):
     me = client.get("/users/me", headers=candidate_headers).json()
-    signup = client.post("/auth/signup", json={"full_name": "Pat Doe", "email": "pat@example.com", "password": "Another1Pass"}).json()
+    signup = client.post("/auth/signup", json={"full_name": "Pat Doe", "email": "pat@example.com", "password": "Another1Pass", **CONSENT}).json()
     for body in (me, signup):
         assert not {"password_hash", "otp_code", "otp_expiry", "reset_token", "profile_picture"} & set(body)
 
@@ -138,7 +138,7 @@ def test_disabled_account_token_stops_working(client, db, candidate_headers):
 
 # ───────────────────────── password hashing ─────────────────────────
 def test_signup_stores_argon2id_never_plaintext(client, db):
-    client.post("/auth/signup", json={"full_name": "Pat Doe", "email": "pat@example.com", "password": "Another1Pass"})
+    client.post("/auth/signup", json={"full_name": "Pat Doe", "email": "pat@example.com", "password": "Another1Pass", **CONSENT})
     stored = db.query(User).filter(User.email == "pat@example.com").one().password_hash
     assert stored.startswith("$argon2id$") and "Another1Pass" not in stored
 
@@ -159,7 +159,7 @@ def test_legacy_bcrypt_hash_is_upgraded_on_login_and_still_works(client, db):
 
 @pytest.mark.parametrize("pw", ["Password1", "Qwerty123", "Welcome1", "ALLUPPER1", "alllower1", "NoNumbersHere", "Sh0rt"])
 def test_weak_and_common_passwords_are_refused(client, pw):
-    r = client.post("/auth/signup", json={"full_name": "Pat Doe", "email": "pat@example.com", "password": pw})
+    r = client.post("/auth/signup", json={"full_name": "Pat Doe", "email": "pat@example.com", "password": pw, **CONSENT})
     assert r.status_code == 422
 
 
@@ -300,7 +300,7 @@ XSS = '<script>alert(1)</script><img src=x onerror=alert(1)><a href="javascript:
 
 
 def test_signup_name_is_stripped_of_html_and_control_chars(client, db):
-    r = client.post("/auth/signup", json={"full_name": "<b>Eve</b> \u202eLee\x00 <script>x</script>", "email": "eve@example.com", "password": "Another1Pass"})
+    r = client.post("/auth/signup", json={"full_name": "<b>Eve</b> \u202eLee\x00 <script>x</script>", "email": "eve@example.com", "password": "Another1Pass", **CONSENT})
     assert r.status_code == 200
     name = r.json()["full_name"]
     assert "<" not in name and ">" not in name and "\x00" not in name and "\u202e" not in name
@@ -389,7 +389,7 @@ def test_the_secret_scanner_actually_catches_secrets():
     from scripts.scan_secrets import scan_text
     fake = (
         'DATABASE_URL = "postgresql://postgres:Sup3rS3cretPw@db.abc.supabase.co:5432/postgres"\n'
-        "key = sk-ant-api03-AAAAAAAAAAAAAAAAAAAAAAAA\n"
+        "key = " + "sk-ant-" + "api03-" + "A" * 24 + "\n"  # assembled at runtime so this file itself holds no key-shaped text
         'SECRET_KEY = "a-very-long-hardcoded-secret-value-1234"\n'
     )
     kinds = " ".join(scan_text(fake, "app/x.py"))

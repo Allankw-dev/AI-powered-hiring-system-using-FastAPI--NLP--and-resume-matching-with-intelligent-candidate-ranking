@@ -3,6 +3,7 @@ import streamlit as st
 from api import API_BASE_URL
 from safe import esc
 import chat_widget
+import legal_pages
 
 from pages import home
 from pages import login
@@ -201,6 +202,24 @@ div[data-testid="stDataFrame"] {
     border: 1px solid rgba(59,130,246,0.35);
     box-shadow: 0 0 20px rgba(59,130,246,0.15), inset 0 0 20px rgba(59,130,246,0.05);
 }
+
+/* ── Accessibility: text that meets WCAG AA contrast (4.5:1) on the dark background, and visible keyboard focus ── */
+.stApp .nav-label { color: #c4b5fd; }
+.stApp .brand-name { color: #c4b5fd; }
+.stApp .footer-text, .stApp .brand-tagline, .stApp .login-subtitle, .stApp .forgot-subtitle,
+.stApp .reset-subtitle, .stApp .card-sub, .stApp .bstat-lbl { color: #94a3b8 !important; }
+.stApp [data-testid="stMarkdownContainer"] a { color: #93c5fd; text-decoration: underline; }
+.stApp button:focus-visible, .stApp a:focus-visible, .stApp input:focus-visible, .stApp textarea:focus-visible,
+.stApp [data-baseweb="radio"]:focus-within, .stApp [data-baseweb="checkbox"]:focus-within {
+    outline: 3px solid #fbbf24 !important; outline-offset: 2px !important;
+}
+@media (prefers-reduced-motion: reduce) {
+    .stApp *, .stApp *::before, .stApp *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
+/* ── Legal pages and footer ── */
+.stApp .legal-doc { max-width: 880px; margin: 0 auto; line-height: 1.7; }
+.stApp .legal-footer { text-align: center; color: #94a3b8; font-size: 13px; padding: 6px 0 28px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -226,6 +245,13 @@ if reset_token and st.session_state.page != "Reset Password":
 # ---------------------------
 # NAV FROM HOME IFRAME
 # ---------------------------
+# Link from the bottom of an application email: ?unsubscribe=<signed token>
+unsubscribe_token = st.query_params.get("unsubscribe", "")
+if unsubscribe_token:
+    st.session_state.unsubscribe_token = unsubscribe_token
+    st.session_state.page = "Unsubscribe"
+    st.query_params.clear()
+
 nav_target = st.query_params.get("nav", "")
 if nav_target:
     st.query_params.clear()
@@ -252,7 +278,7 @@ def logout():
     st.rerun()
 
 def route_guard(page_name: str):
-    public_pages = ["Home", "Login", "Sign Up", "Forgot Password", "Reset Password"]
+    public_pages = ["Home", "Login", "Sign Up", "Forgot Password", "Reset Password", *legal_pages.PUBLIC_EXTRA_PAGES]
     candidate_pages = ["Dashboard", "Jobs", "Applications", "Upload Resume", "Profile"]
     admin_pages = ["Admin Panel"]
 
@@ -315,6 +341,11 @@ if st.session_state.page in nav_pages and selected_page != st.session_state.page
 
 st.markdown('<div class="neon-divider"></div>', unsafe_allow_html=True)
 
+# One-time messages (for example after deleting an account) and the cookie information bar.
+if st.session_state.get("flash"):
+    st.success(st.session_state.pop("flash"))
+legal_pages.render_cookie_notice()
+
 # ---------------------------
 # LOGIN STATUS
 # ---------------------------
@@ -358,9 +389,18 @@ elif page == "Forgot Password":
     forgot_password.render()
 elif page == "Reset Password":
     reset_password.render()
+elif page in legal_pages.LEGAL_PAGES:
+    legal_pages.render_legal(page)
+elif page == "Contact":
+    legal_pages.render_contact()
+elif page == "Unsubscribe":
+    legal_pages.render_unsubscribe(API_BASE_URL)
 else:
     st.session_state.page = "Home"
     st.rerun()
+
+# Legal links and who runs the service, on every page
+legal_pages.render_footer()
 
 # ---------------------------
 # AI ASSISTANT CHAT BUBBLE

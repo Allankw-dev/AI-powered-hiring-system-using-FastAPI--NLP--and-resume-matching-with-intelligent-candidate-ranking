@@ -8,6 +8,7 @@ headless = true
 [client]
 showErrorDetails = "none"  # visitors never see Python stack traces
 toolbarMode = "viewer"     # hides developer menu items from visitors
+showSidebarNavigation = false  # the app has its own menu; the auto-generated page list only adds hidden Tab stops
 
 [browser]
 gatherUsageStats = false

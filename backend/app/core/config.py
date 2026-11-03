@@ -64,10 +64,16 @@ class Settings(BaseSettings):
 
     # ── Web ──
     FRONTEND_URL: str = "https://ai-powered-hiring-system.streamlit.app"
+    API_PUBLIC_URL: str = ""          # public https URL of THIS API (enables one-click unsubscribe headers in emails)
     CORS_ORIGINS: str = ""            # comma separated. Empty = only FRONTEND_URL (+ localhost in dev)
     ALLOWED_HOSTS: str = ""           # optional comma separated Host allow-list, e.g. "api.example.com"
     TRUSTED_PROXY_HOPS: int = 1       # proxies in front of the app (for rate-limit IPs)
     HSTS_ENABLED: bool = True         # Strict-Transport-Security (only sent in production)
+
+    # ── Who runs the service (shown in the legal pages and in email footers) ──
+    OPERATOR_NAME: str = "Allan Kamau"
+    OPERATOR_LOCATION: str = "Nairobi, Kenya"
+    CONTACT_EMAIL: str = ""           # privacy / support contact. Set this before you go live.
 
     # ── Chat assistant (Claude is used first, Gemini is the fallback) ──
     ANTHROPIC_API_KEY: SecretStr = SecretStr("")
@@ -130,6 +136,13 @@ class Settings(BaseSettings):
             raise ValueError("TRUSTED_PROXY_HOPS cannot be negative.")
         if not 1 <= self.MAX_UPLOAD_MB <= 25 or not 1 <= self.MAX_PICTURE_MB <= 10:
             raise ValueError("MAX_UPLOAD_MB must be 1-25 and MAX_PICTURE_MB must be 1-10.")
+
+        if self.API_PUBLIC_URL and not self.API_PUBLIC_URL.startswith(("https://", "http://localhost")):
+            raise ValueError("API_PUBLIC_URL must start with https://")
+        if self.CONTACT_EMAIL and "@" not in self.CONTACT_EMAIL:
+            raise ValueError("CONTACT_EMAIL must be an email address.")
+        if not dev_like and not self.CONTACT_EMAIL:
+            logger.warning("CONTACT_EMAIL is not set: users have no email address for privacy requests.")
 
         if self.OTP_DELIVERY not in {"email", "log"}:
             raise ValueError("OTP_DELIVERY must be 'email' or 'log'.")

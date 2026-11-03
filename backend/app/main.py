@@ -1,5 +1,6 @@
 import logging
 import os
+import importlib
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -12,10 +13,12 @@ from slowapi.middleware import SlowAPIMiddleware
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.core.middleware import BodySizeLimitMiddleware, SecurityHeadersMiddleware, error_headers
-from app.routers import admin, applications, auth, chat, jobs, password_reset, resumes, users
+from app.core.db_setup import ensure_tables
+from app.routers import admin, applications, auth, chat, jobs, password_reset, resumes, unsubscribe, users
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger("app")
+importlib.import_module("app.models")  # registers every table on Base.metadata
 # These libraries log full request URLs at INFO level; keep them quiet.
 for _noisy in ("httpx", "httpcore", "multipart"):
     logging.getLogger(_noisy).setLevel(logging.WARNING)
@@ -24,6 +27,10 @@ for _noisy in ("httpx", "httpcore", "multipart"):
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+    try:
+        ensure_tables()  # adds tables introduced by an update; never alters existing ones
+    except Exception:  # noqa: BLE001 - the API can still start; the error is logged
+        logger.exception("Could not create missing tables")
     if not settings.email_configured:
         logger.warning("No email provider configured: admin 2FA codes and reset emails cannot be sent.")
     if not (settings.ANTHROPIC_API_KEY or settings.GEMINI_API_KEY):
@@ -90,7 +97,7 @@ app.add_middleware(BodySizeLimitMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 
 # ── Routers ──
-for module in (auth, jobs, resumes, applications, admin, users, password_reset, chat):
+for module in (auth, jobs, resumes, applications, admin, users, password_reset, unsubscribe, chat):
     app.include_router(module.router)
 
 

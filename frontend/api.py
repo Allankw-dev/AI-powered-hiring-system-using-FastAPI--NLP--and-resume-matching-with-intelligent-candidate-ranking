@@ -86,13 +86,15 @@ def get_headers_without_content_type():
 # ------------------------------
 # AUTH ROUTES
 # ------------------------------
-def sign_up(full_name, email, password):
+def sign_up(full_name, email, password, accepted_terms=False, confirm_adult=False):
     return _http.post(
         f"{API_BASE_URL}/auth/signup",
         json={
             "full_name": full_name,
             "email": email,
-            "password": password
+            "password": password,
+            "accepted_terms": bool(accepted_terms),
+            "confirm_adult": bool(confirm_adult),
         },
         timeout=REQUEST_TIMEOUT
     )
@@ -312,6 +314,19 @@ def update_my_profile(full_name, email):
             "email": email
         },
         timeout=REQUEST_TIMEOUT
+    )
+
+
+def export_my_data():
+    return _http.get(f"{API_BASE_URL}/users/me/export", headers=get_headers(), timeout=REQUEST_TIMEOUT)
+
+
+def delete_my_account(password):
+    return _http.delete(
+        f"{API_BASE_URL}/users/me",
+        json={"password": password},
+        headers=get_headers(),
+        timeout=REQUEST_TIMEOUT,
     )
 
 

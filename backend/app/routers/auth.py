@@ -15,6 +15,8 @@ from app.core.security import (
     password_needs_rehash,
     verify_password,
 )
+from app.core.legal import CONSENT_ADULT, CONSENT_TERMS_PRIVACY, LEGAL_VERSION
+from app.models.consent import ConsentRecord
 from app.models.user import User
 from app.schemas.auth import AdminOTPVerifyRequest, LoginRequest, SignupRequest, TokenResponse
 from app.schemas.user import UserOut
@@ -29,18 +31,18 @@ BAD_CREDENTIALS = "Invalid email or password"
 BAD_OTP = "Invalid or expired code"
 
 
-def _mask(email: str) -> str:
+def mask_email(email: str) -> str:
     name, _, domain = email.partition("@")
     return f"{name[:2]}***@{domain}"
 
 
-def _check_credentials(request: Request, db: Session, email: str, password: str) -> User:
+def check_credentials(request: Request, db: Session, email: str, password: str) -> User:
     """Constant-time-ish credential check (same work whether or not the email exists)."""
     ip = client_ip(request)
 
     locked_for = login_throttle.seconds_locked(email, ip)
     if locked_for:
-        logger.warning("Login blocked (too many failures) for %s from %s", _mask(email), ip)
+        logger.warning("Login blocked (too many failures) for %s from %s", mask_email(email), ip)
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=f"Too many failed attempts. Try again in {max(1, locked_for // 60 + 1)} minute(s).",
@@ -52,7 +54,7 @@ def _check_credentials(request: Request, db: Session, email: str, password: str)
     password_ok = verify_password(password, stored_hash)
     if not user or not password_ok:
         login_throttle.record_failure(email, ip)
-        logger.warning("Failed login for %s from %s", _mask(email), ip)
+        logger.warning("Failed login for %s from %s", mask_email(email), ip)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=BAD_CREDENTIALS)
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This account has been disabled")
@@ -74,7 +76,7 @@ def _token_for(user: User) -> dict:
         "role": user.role,
         "pwv": password_fingerprint(user.password_hash),  # token dies when the password changes
     })
-    return {"access_token": token, "token_type": "bearer", "role": user.role}  # nosec B105
+    return {"access_token": token, "token_type": "bearer", "role": user.role}
 
 
 @router.post("/signup", response_model=UserOut)
@@ -94,6 +96,10 @@ def signup(request: Request, payload: SignupRequest, db: Session = Depends(get_d
     )
     db.add(user)
     try:
+        db.flush()  # assigns user.id and surfaces a duplicate email before anything else is written
+        # Keep proof of what was agreed to and which version of the texts it was.
+        db.add(ConsentRecord(user_id=user.id, kind=CONSENT_TERMS_PRIVACY, version=LEGAL_VERSION))
+        db.add(ConsentRecord(user_id=user.id, kind=CONSENT_ADULT, version=LEGAL_VERSION))
         db.commit()
     except IntegrityError:
         db.rollback()
@@ -105,7 +111,7 @@ def signup(request: Request, payload: SignupRequest, db: Session = Depends(get_d
 @router.post("/login", response_model=TokenResponse)
 @limiter.limit("5/minute")
 def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)):
-    user = _check_credentials(request, db, payload.email, payload.password)
+    user = check_credentials(request, db, payload.email, payload.password)
 
     # A password alone must never be enough for an admin.
     if user.role == "admin":
@@ -117,7 +123,7 @@ def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)
 @router.post("/admin/request-otp")
 @limiter.limit("3/minute")
 def admin_request_otp(request: Request, payload: LoginRequest, db: Session = Depends(get_db)):
-    user = _check_credentials(request, db, payload.email, payload.password)
+    user = check_credentials(request, db, payload.email, payload.password)
     if user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
 
@@ -147,7 +153,7 @@ def admin_verify_otp(request: Request, payload: AdminOTPVerifyRequest, db: Sessi
         raise HTTPException(status_code=400, detail=BAD_OTP)
 
     if not otp_service.otp_matches(user, payload.otp_code):
-        logger.warning("Wrong admin code for %s from %s", _mask(user.email), client_ip(request))
+        logger.warning("Wrong admin code for %s from %s", mask_email(user.email), client_ip(request))
         if otp_service.register_failure(user.email) >= otp_service.MAX_ATTEMPTS:
             otp_service.clear_otp(db, user)
             raise HTTPException(status_code=400, detail="Too many wrong codes. Request a new code.")
