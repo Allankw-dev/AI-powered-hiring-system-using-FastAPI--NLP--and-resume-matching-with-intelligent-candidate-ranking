@@ -171,7 +171,7 @@ def render():
 
         st.markdown('<div class="neon-divider"></div>', unsafe_allow_html=True)
 
-        if st.button("🔐 Already have an account? Log In", use_container_width=True):
+        if st.button(" Already have an account?Log In", use_container_width=True):
             st.session_state.page = "Login"
             st.rerun()
 
