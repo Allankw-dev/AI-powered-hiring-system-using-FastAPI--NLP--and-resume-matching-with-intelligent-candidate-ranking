@@ -1,4 +1,4 @@
-# 🤖 AI-Powered Hiring System..
+# 🤖 AI-Powered Hiring System.
 
 > An intelligent recruitment platform built with FastAPI, Streamlit and PostgreSQL. It uses NLP and machine learning to screen resumes, score candidates and rank them for recruiters.
 
