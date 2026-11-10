@@ -10,6 +10,14 @@
 
 **Jump to:** [Features](#-features) · [Security](#-security) · [Privacy](#-privacy--legal) · [Getting started](#-getting-started) · [Scripts](#-maintenance-scripts) · [API](#-api) · [Deployment](#-deployment)
 
+## Screenshots and walkthrough
+
+| Desktop | Mobile |
+|---|---|
+| ![AI Hiring desktop home screen](screenshots/desktop.jpg) | ![AI Hiring mobile home screen](screenshots/mobile.jpg) |
+
+[Watch the public home page screen recording (MP4)](media/walkthrough.mp4)
+
 ---
 
 ## ✨ Features
