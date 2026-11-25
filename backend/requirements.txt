@@ -1,7 +1,7 @@
 # Versions below are the ones the test-suite was run against. "~=X.Y" means
 # "X.Y or any newer compatible release of the same major version", so security
 # patches are picked up but a breaking major release is not.
-fastapi~=0.162
+fastapi~=0.165
 uvicorn~=0.54
 sqlalchemy~=2.1
 psycopg2-binary~=2.9
